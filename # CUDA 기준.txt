@@ -1,0 +1,47 @@
+# CUDA 기준
+
+학습 :
+python -m uzr.train_meta --steps 20000 --device cuda --z_dim 128 --z_think_dim 64 --z_lang_dim 32 --inner_steps 5 --inner_eta 0.5 --lam_rule 1e-3 --lam_think 1e-3 --single_z --identity "루리아"
+
+
+비선형 학습:
+python -m uzr.train_meta --device cuda --steps 3000 --inner_steps 3 --inner_eta 0.235 --d_model 512 --z_dim 512 --max_len 256 --lr 1.5e-4 --amp --warmup_steps 1000 --cosine --single_z --id_weight 0.565 --identity "루리아" --save_every 1000
+
+
+
+멀티턴 요약로그
+python infer_longrun_standalone.py --device cuda --ckpt uzr_ckpt_last.pt --turns 1500 --max_items 20000 --inner_steps 5 --summary_csv summary_1500.csv --summary_json summary_1500.json --summary_every 50 --identity "루리아"
+
+
+대화형 CLi
+
+python -m uzr.chat_cli --device cuda --ckpt uzr_ckpt_best.pt --identity "루리아" --inner_steps 5 --lam 0.0 --alpha 0.3 --prox 0.0018 --max_items 20000 --tone polite --lang auto --save_transcript chat_log.json
+
+
+
+클로드 추천 :
+python -m uzr.train_meta --device cuda --steps 15000 --inner_steps 5 --inner_eta 0.4 --lam 1e-2 --d_model 384 --z_dim 160 --max_len 160 --lr 1.5e-4 --amp --warmup_steps 1000 --cosine --single_z --id_weight 0.1 --identity "루리아" --save_every 1000
+
+
+GPT추천
+
+python -m uzr.train_meta --steps 20000 --device cuda --identity "루리아" --cosine --warmup_steps 3000 --id_weight 0.05 --inner_steps 5 --inner_eta 0.40 --lam_rule 7e-4 --lam_think 6e-4 --single_z
+
+
+python infer_longrun_standalone.py --device cuda --ckpt uzr_ckpt_best.pt --turns 300 --inner_steps 5 --lam_rule 3e-3 --lam_think 3e-3 --summary_every 50 --identity "루리아"
+
+
+
+python -m uzr.infer_longrun_standalone --device cuda --ckpt uzr_ckpt_best.pt --turns 300 --offmem on --max_items 100000 --inner_steps 6 --lam_rule 7e-4 --lam_think 6e-4 --identity "루리아"
+
+
+
+
+망각 분석기
+
+python forgetting_analyzer.py --csv infer_summary.csv --window 120 --early 100 --late 100 --ce_slope 1e-4 --ce_delta 0.20 --conf_slope -1e-4 --conf_ce_corr_min -0.20 --zthink_drop_frac 0.15 --zrule_drop_frac 0.15 --entropy_delta 0.40 --lang_ce_delta 0.40 --save_json forgetting_report.json --save_csv_prefix forgetting_out --plot 
+
+
+
+로깅 +
+python infer_longrun_standalone_logged.py --device cuda --ckpt uzr_ckpt_best.pt --turns 2000 --inner_steps 5 --genlog_csv generation_log.csv

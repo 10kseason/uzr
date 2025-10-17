@@ -1,0 +1,318 @@
+import argparse, random, os, math, time
+from typing import List, Tuple
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from tqdm import tqdm
+
+from .model import UZRModel, ByteTokenizer, seq_ce_loss, soft_threshold
+from .memory import CompressedMemory, make_sketch
+from .tasks import sample_task
+
+IDENTITY_QA_KO = [
+    ("너는 누구야?", "나는 {id}입니다."),
+    ("자기소개 해 봐.", "나는 {id}입니다."),
+    ("이름이 뭐야?", "{id}"),
+]
+IDENTITY_QA_EN = [
+    ("Who are you?", "I am {id}."),
+    ("What is your name?", "{id}"),
+    ("Introduce yourself.", "I am {id}."),
+]
+IDENTITY_QA_JA = [
+    ("あなたはだれ？", "わたしは{id}です。"),
+    ("おなまえは？", "{id}"),
+    ("じこしょうかいして。", "わたしは{id}です。"),
+]
+
+LANG2ID = {"base": 0, "en": 1, "ko": 2, "ja": 3}
+ID2LANG = {v: k for k, v in LANG2ID.items()}
+
+
+def detect_lang_from_text(text: str) -> str:
+    has_hangul = False
+    has_kana_or_cjk = False
+    has_latin = False
+    for ch in text:
+        code = ord(ch)
+        if 0xAC00 <= code <= 0xD7A3:
+            has_hangul = True
+        elif 0x3040 <= code <= 0x30FF or 0x31F0 <= code <= 0x31FF or 0x4E00 <= code <= 0x9FFF:
+            has_kana_or_cjk = True
+        elif ("a" <= ch <= "z") or ("A" <= ch <= "Z"):
+            has_latin = True
+    if has_hangul:
+        return "ko"
+    if has_kana_or_cjk:
+        return "ja"
+    if has_latin:
+        return "en"
+    return "base"
+
+
+def set_seed(seed: int):
+    random.seed(seed); torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
+
+
+def batchify(pairs, tok):
+    xs, ys = [], []
+    for x, y in pairs:
+        xs.append(tok.encode(x))
+        ys.append(tok.encode(y))
+    X = torch.stack(xs, dim=0)
+    Y = torch.stack(ys, dim=0)
+    return X, Y
+
+
+def inner_adapt_z(model, Xc, Yc, z, lam=1e-3, eta=0.5, steps=3):
+    # z-only updates
+    z = z.clone().detach().requires_grad_(True)
+    for _ in range(steps):
+        logits = model(Xc, z)
+        loss = seq_ce_loss(logits, Yc) + lam * torch.mean(torch.abs(z))
+        g = torch.autograd.grad(loss, z, retain_graph=False)[0]
+        z = (z - eta * g).detach().requires_grad_(True)
+    # proximal soft-threshold (L1)
+    with torch.no_grad():
+        z = soft_threshold(z, lam * 0.5)
+    return z.detach()
+
+
+def inner_adapt_z_multi(model, Xc, Yc, z_rule, z_think, lang_id, lam_rule=1e-3, lam_think=1e-3, eta=0.5, steps=3):
+    z_rule = z_rule.clone().detach().requires_grad_(True)
+    z_think = z_think.clone().detach().requires_grad_(True)
+    for _ in range(steps):
+        logits = model(Xc, {"rule": z_rule, "think": z_think, "lang_id": lang_id})
+        loss = seq_ce_loss(logits, Yc)
+        loss = loss + lam_rule * torch.mean(torch.abs(z_rule)) + lam_think * torch.mean(torch.abs(z_think))
+        grad_rule, grad_think = torch.autograd.grad(loss, (z_rule, z_think), retain_graph=False)
+        z_rule = (z_rule - eta * grad_rule).detach().requires_grad_(True)
+        z_think = (z_think - eta * grad_think).detach().requires_grad_(True)
+    with torch.no_grad():
+        z_rule = soft_threshold(z_rule, lam_rule * 0.5)
+        z_think = soft_threshold(z_think, lam_think * 0.5)
+    return z_rule.detach(), z_think.detach()
+
+
+def make_identity_batch(tok, identity, batch_lang="mix", n=6):
+    pairs = []
+    for _ in range(n):
+        lang = random.choice(["ko", "en", "ja"]) if batch_lang == "mix" else batch_lang
+        if lang == "ko":
+            q, a = random.choice(IDENTITY_QA_KO)
+        elif lang == "en":
+            q, a = random.choice(IDENTITY_QA_EN)
+        else:
+            q, a = random.choice(IDENTITY_QA_JA)
+        pairs.append((q, a.format(id=identity)))
+    return batchify(pairs, tok)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--device", default="cuda")
+    ap.add_argument("--steps", type=int, default=5000)
+    ap.add_argument("--lr", type=float, default=2e-4)
+    ap.add_argument("--d_model", type=int, default=256)
+    ap.add_argument("--z_dim", type=int, default=128)
+    ap.add_argument("--z_think_dim", type=int, default=64)
+    ap.add_argument("--z_lang_dim", type=int, default=32)
+    ap.add_argument("--num_langs", type=int, default=len(LANG2ID))
+    ap.add_argument("--max_len", type=int, default=256)
+    ap.add_argument("--inner_steps", type=int, default=6)
+    ap.add_argument("--inner_eta", type=float, default=0.6)
+    ap.add_argument("--save", default="uzr_ckpt.pt")
+    ap.add_argument("--save_every", type=int, default=1000)
+    ap.add_argument("--resume", default="")
+    ap.add_argument("--seed", type=int, default=1337)
+    ap.add_argument("--amp", action="store_true")
+    ap.add_argument("--warmup_steps", type=int, default=3000)
+    ap.add_argument("--cosine", action="store_true", help="Use cosine LR decay after warmup")
+    ap.add_argument("--single_z", action="store_true", help="Share single z across context batch")
+    ap.add_argument("--identity", default="루리아", help="identity string used for identity auxiliary loss")
+    ap.add_argument("--id_weight", type=float, default=0.025, help="weight of identity auxiliary loss")
+    ap.add_argument("--lam", type=float, default=1e-3, help="L1 regularization on z (legacy, used if lam_rule/lam_think unset)")
+    ap.add_argument("--lam_rule", type=float, default=None, help="L1 regularization strength for z_rule")
+    ap.add_argument("--lam_think", type=float, default=None, help="L1 regularization strength for z_thinking")
+    args = ap.parse_args()
+
+    if args.lam_rule is None:
+        args.lam_rule = args.lam
+    if args.lam_think is None:
+        args.lam_think = args.lam
+
+    set_seed(args.seed)
+    device = torch.device(args.device)
+    tok = ByteTokenizer(max_len=args.max_len)
+    model = UZRModel(
+        tok.vocab_size,
+        d_model=args.d_model,
+        z_dim=args.z_dim,
+        max_len=args.max_len,
+        z_think_dim=args.z_think_dim,
+        z_lang_dim=args.z_lang_dim,
+        num_langs=args.num_langs,
+    ).to(device)
+
+    mem = CompressedMemory(max_items=8192, device=device)
+
+    def avg_embed(X: torch.Tensor) -> torch.Tensor:
+        with torch.no_grad():
+            h = model.encoder(X)
+            return h.mean(dim=1)
+
+    opt = optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.98), weight_decay=0.01)
+    scaler = torch.cuda.amp.GradScaler(enabled=args.amp and device.type == "cuda")
+
+    start_step = 0
+    best_loss = float("inf")
+    last_path = "uzr_ckpt_last.pt"
+    best_path = "uzr_ckpt_best.pt"
+    if args.resume and os.path.exists(args.resume):
+        data = torch.load(args.resume, map_location="cpu")
+        model.load_state_dict(data["model"])
+        if "opt" in data:
+            opt.load_state_dict(data["opt"])
+        start_step = data.get("step", 0)
+        best_loss = data.get("best_loss", best_loss)
+        print(f"[resume] loaded {args.resume} from step {start_step} (best_loss={best_loss:.3f})")
+
+    def lr_schedule(step):
+        if args.warmup_steps > 0 and step < args.warmup_steps:
+            return (step + 1) / args.warmup_steps
+        if args.cosine:
+            t = (step - args.warmup_steps) / max(1, args.steps - args.warmup_steps)
+            return 0.5 * (1 + math.cos(math.pi * min(1.0, max(0.0, t))))
+        return 1.0
+
+    ema = None
+    pbar = tqdm(range(start_step, args.steps), desc="meta-train")
+    for step in pbar:
+        C_pairs, Q_pairs, desc = sample_task(n_context=6, n_query=8, n_tokens=5)
+
+        example_text = Q_pairs[0][0] + " " + Q_pairs[0][1]
+        lang_key = detect_lang_from_text(example_text)
+        lang_idx = LANG2ID.get(lang_key, LANG2ID["base"])
+
+        Xc, Yc = batchify(C_pairs, tok)
+        Xq, Yq = batchify(Q_pairs, tok)
+        Xc, Yc, Xq, Yq = Xc.to(device), Yc.to(device), Xq.to(device), Yq.to(device)
+
+        if args.single_z:
+            enc_avg = avg_embed(Xc).mean(dim=0)
+            items = mem.retrieve(enc_avg, topk=4)
+            if items:
+                Z = torch.stack([it.val["z_slow"] for it in items], dim=0)
+                z_rule0 = Z.mean(dim=0)
+            else:
+                z_rule0 = model.init_z(batch_size=1)[0]
+            z_rule0 = z_rule0.to(device)
+            z_think0 = model.init_z_thinking(batch_size=1)[0].to(device)
+            z_rule_star, z_think_star = inner_adapt_z_multi(
+                model,
+                Xc,
+                Yc,
+                z_rule0,
+                z_think0,
+                lang_idx,
+                lam_rule=args.lam_rule,
+                lam_think=args.lam_think,
+                eta=args.inner_eta,
+                steps=args.inner_steps,
+            )
+            z_for_q = {"rule": z_rule_star, "think": z_think_star, "lang_id": lang_idx}
+        else:
+            z_rule0 = []
+            z_think0 = model.init_z_thinking(batch_size=Xc.size(0)).to(device)
+            enc = avg_embed(Xc)
+            for b in range(Xc.size(0)):
+                items = mem.retrieve(enc[b], topk=4)
+                if items:
+                    Z = torch.stack([it.val["z_slow"] for it in items], dim=0)
+                    z0 = Z.mean(dim=0)
+                else:
+                    z0 = model.init_z(batch_size=1)[0]
+                z_rule0.append(z0)
+            z_rule0 = torch.stack(z_rule0, dim=0).to(device)
+            zr_list, zt_list = [], []
+            for b in range(Xc.size(0)):
+                zr, zt = inner_adapt_z_multi(
+                    model,
+                    Xc[b:b + 1],
+                    Yc[b:b + 1],
+                    z_rule0[b],
+                    z_think0[b],
+                    lang_idx,
+                    lam_rule=args.lam_rule,
+                    lam_think=args.lam_think,
+                    eta=args.inner_eta,
+                    steps=args.inner_steps,
+                )
+                zr_list.append(zr)
+                zt_list.append(zt)
+            z_rule_star = torch.stack(zr_list, dim=0).mean(dim=0)
+            z_think_star = torch.stack(zt_list, dim=0).mean(dim=0)
+            z_for_q = {"rule": z_rule_star, "think": z_think_star, "lang_id": lang_idx}
+
+        cur_lr = args.lr * lr_schedule(step)
+        for g in opt.param_groups:
+            g["lr"] = cur_lr
+
+        with torch.cuda.amp.autocast(enabled=args.amp and device.type == "cuda"):
+            logits_q = model(Xq, z_for_q)
+            loss = seq_ce_loss(logits_q, Yq)
+
+            Xi, Yi = make_identity_batch(tok, args.identity, batch_lang="mix", n=4)
+            Xi, Yi = Xi.to(device), Yi.to(device)
+            identity_text = tok.decode(Xi[0].tolist())
+            id_lang_key = detect_lang_from_text(identity_text)
+            id_lang_idx = LANG2ID.get(id_lang_key, LANG2ID["base"])
+            logits_i = model(Xi, {"rule": z_rule_star, "think": z_think_star, "lang_id": id_lang_idx})
+            id_loss = seq_ce_loss(logits_i, Yi)
+            total = loss + args.id_weight * id_loss
+
+        opt.zero_grad()
+        if scaler.is_enabled():
+            scaler.scale(total).backward()
+            scaler.step(opt)
+            scaler.update()
+        else:
+            total.backward()
+            opt.step()
+
+        loss_val = float(loss.item())
+        ema = loss_val if ema is None else ema * 0.95 + loss_val * 0.05
+        pbar.set_postfix({
+            "loss": f"{loss_val:.3f}",
+            "ema": f"{ema:.3f}",
+            "lr": f"{cur_lr:.2e}",
+            "task": desc[:32],
+            "lang": ID2LANG.get(lang_idx, "base"),
+        })
+
+        with torch.no_grad():
+            enc_avg_q = avg_embed(Xq).mean(dim=0)
+            key, val = make_sketch(enc_avg_q, z_rule_star, meta={"lang": int(lang_idx), "desc": desc})
+            mem.add(key, val, step)
+
+
+        if (step + 1) % max(1, args.save_every) == 0 or step + 1 == args.steps:
+            payload = {
+                "model": model.state_dict(),
+                "args": vars(args),
+                "opt": opt.state_dict(),
+                "step": step + 1,
+                "best_loss": best_loss,
+            }
+            torch.save(payload, last_path)
+            if ema < best_loss:
+                best_loss = ema
+                payload["best_loss"] = best_loss
+                torch.save(payload, best_path)
+
+    torch.save({"model": model.state_dict(), "args": vars(args)}, args.save)
+    print(f"Saved to {args.save}; last={last_path}; best={best_path} (best_ema={best_loss:.3f})")
+
+
+if __name__ == "__main__":
+    main()

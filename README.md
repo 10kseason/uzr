@@ -1,6 +1,12 @@
-# UZR — Universal Z-Rule Runner Architecture
+# UZR — Universal Z-Rule Runner Architecture (Preview!)
+
+실험입니다.
 
 https://huggingface.co/naksyu/UZR/tree/main                 <<<<<<<< MODEL
+
+
+
+
 
 
 ## 개요 (Korean)

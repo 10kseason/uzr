@@ -1,0 +1,1001 @@
+turn,lang,lang_id,rule_desc,ce_query,conf_context,zslow_rule_l1,zslow_think_l1,zlang_norm,mem_items
+1,en,1,en: reverse tokens then uppercase every 2nd token,3.829,0.3251,4.1005,7.5912,10.8949,4
+2,en,1,en: dedupe tokens then wrap digits with [],2.979,0.3602,2.5975,4.9355,10.8949,5
+3,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4862,0.3817,3.8983,6.394,10.8949,6
+4,base,0,base: add << >> then sort numeric tokens descending,2.73,0.3712,3.2368,5.9859,11.5183,7
+5,en,1,en: append #index (1-based) to each token,4.7464,0.276,3.1419,6.0824,10.8949,8
+6,en,1,en: build acronym and append token count,4.3447,0.301,4.9036,8.7538,10.8949,9
+7,base,0,base: evaluate arithmetic expression,3.4839,0.3471,4.391,8.3256,11.5183,10
+8,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.7376,0.326,3.3422,6.0481,11.5183,11
+9,base,0,base: factorial -> return n!,2.5842,0.3573,5.0533,6.7051,11.5183,12
+10,base,0,base: range -> output span between max and min,4.224,0.2987,4.366,6.6794,11.5183,13
+11,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.1075,0.2571,8.7322,14.8862,11.4583,14
+12,ko,2,ko: 날짜를 ISO 형태로 변환,1.3262,0.4031,8.1965,14.4278,11.4583,15
+13,ko,2,ko: 숫자를 괄호로 감싸기,4.7757,0.2725,10.2103,17.6615,11.4583,16
+14,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4849,0.2996,11.7478,20.3776,11.4583,17
+15,ja,3,ja: ひらがな を カタカナ に 変換,1.3221,0.4471,8.3531,14.3792,11.3929,18
+16,ja,3,ja: カタカナ を ひらがな に 変換,1.7256,0.4119,6.1835,12.2405,11.3929,19
+17,ja,3,ja: 半角数字 を 全角 に,3.9794,0.2701,6.0232,12.1172,11.3929,20
+18,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.8537,0.2734,9.0822,17.6039,11.4583,21
+19,base,0,base: sort tokens by length ascending,2.9583,0.3592,6.8249,13.6635,11.5183,22
+20,en,1,en: keep tokens containing at least two vowels,0.425,0.4381,2.8382,6.2083,10.8949,23
+21,en,1,en: reverse tokens then uppercase every 2nd token,3.7996,0.3263,3.8461,8.7627,10.8949,24
+22,en,1,en: dedupe tokens then wrap digits with [],2.9844,0.3603,2.599,5.9131,10.8949,25
+23,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4885,0.3815,3.6596,6.801,10.8949,26
+24,base,0,base: add << >> then sort numeric tokens descending,2.728,0.3712,3.2508,6.4892,11.5183,27
+25,en,1,en: append #index (1-based) to each token,4.7369,0.2763,3.1142,6.4371,10.8949,28
+26,en,1,en: build acronym and append token count,4.3431,0.301,4.6469,8.9794,10.8949,29
+27,base,0,base: evaluate arithmetic expression,3.4699,0.347,4.3828,8.699,11.5183,30
+28,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.719,0.3271,3.5934,6.503,11.5183,31
+29,base,0,base: factorial -> return n!,2.5221,0.3605,5.6364,7.704,11.5183,32
+30,base,0,base: range -> output span between max and min,4.2137,0.2991,4.6973,7.3013,11.5183,33
+31,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0142,0.2622,8.4068,14.458,11.4583,34
+32,ko,2,ko: 날짜를 ISO 형태로 변환,1.2947,0.4058,8.333,14.5563,11.4583,35
+33,ko,2,ko: 숫자를 괄호로 감싸기,4.719,0.2748,10.2444,17.7489,11.4583,36
+34,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4625,0.3003,11.4405,20.0815,11.4583,37
+35,ja,3,ja: ひらがな を カタカナ に 変換,1.3054,0.448,8.4675,14.7494,11.3929,38
+36,ja,3,ja: カタカナ を ひらがな に 変換,1.7194,0.4122,6.2307,12.3192,11.3929,39
+37,ja,3,ja: 半角数字 を 全角 に,3.9524,0.2718,6.2547,12.8937,11.3929,40
+38,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7762,0.2762,8.8327,17.5778,11.4583,41
+39,base,0,base: sort tokens by length ascending,2.9408,0.3598,7.5973,15.5409,11.5183,42
+40,en,1,en: keep tokens containing at least two vowels,0.1797,0.4378,3.4414,6.9553,10.8949,43
+41,en,1,en: reverse tokens then uppercase every 2nd token,3.7974,0.3264,3.9286,9.1839,10.8949,44
+42,en,1,en: dedupe tokens then wrap digits with [],2.9844,0.3604,2.7342,6.3903,10.8949,45
+43,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4953,0.3808,3.8027,7.1488,10.8949,46
+44,base,0,base: add << >> then sort numeric tokens descending,2.7212,0.3721,3.5406,6.9065,11.5183,47
+45,en,1,en: append #index (1-based) to each token,4.7356,0.2763,3.2542,6.6679,10.8949,48
+46,en,1,en: build acronym and append token count,4.3456,0.3009,4.6352,9.1697,10.8949,49
+47,base,0,base: evaluate arithmetic expression,3.4558,0.3473,4.4929,9.0818,11.5183,50
+48,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.7147,0.3273,3.7514,6.8077,11.5183,51
+49,base,0,base: factorial -> return n!,2.4756,0.3629,6.1676,7.9324,11.5183,52
+50,base,0,base: range -> output span between max and min,4.2059,0.2994,5.1356,7.5507,11.5183,53
+51,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0152,0.2621,8.736,14.5797,11.4583,54
+52,ko,2,ko: 날짜를 ISO 형태로 변환,1.2961,0.4058,8.5273,14.6606,11.4583,55
+53,ko,2,ko: 숫자를 괄호로 감싸기,4.6977,0.2757,10.4513,17.8859,11.4583,56
+54,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4294,0.3014,11.1409,19.6275,11.4583,57
+55,ja,3,ja: ひらがな を カタカナ に 変換,1.302,0.4482,8.4505,14.682,11.3929,58
+56,ja,3,ja: カタカナ を ひらがな に 変換,1.7196,0.4123,6.3389,12.4052,11.3929,59
+57,ja,3,ja: 半角数字 を 全角 に,3.9511,0.2718,6.3193,13.0554,11.3929,60
+58,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7705,0.2764,8.8736,17.7577,11.4583,61
+59,base,0,base: sort tokens by length ascending,2.9405,0.3598,7.73,15.936,11.5183,62
+60,en,1,en: keep tokens containing at least two vowels,0.2019,0.438,3.8663,7.6119,10.8949,63
+61,en,1,en: reverse tokens then uppercase every 2nd token,3.7957,0.3265,4.1237,9.64,10.8949,64
+62,en,1,en: dedupe tokens then wrap digits with [],2.9864,0.3603,2.9099,6.8075,10.8949,65
+63,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4949,0.3809,3.8931,7.4653,10.8949,66
+64,base,0,base: add << >> then sort numeric tokens descending,2.7215,0.3722,3.6486,7.2026,11.5183,67
+65,en,1,en: append #index (1-based) to each token,4.7322,0.2764,3.3438,6.8547,10.8949,68
+66,en,1,en: build acronym and append token count,4.3462,0.3009,4.6207,9.1914,10.8949,69
+67,base,0,base: evaluate arithmetic expression,3.4543,0.3473,4.4895,9.1515,11.5183,70
+68,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.7034,0.328,3.9141,6.9674,11.5183,71
+69,base,0,base: factorial -> return n!,2.4672,0.3633,6.3434,8.1198,11.5183,72
+70,base,0,base: range -> output span between max and min,4.1972,0.2997,5.4518,7.8544,11.5183,73
+71,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0216,0.2618,8.9541,14.7149,11.4583,74
+72,ko,2,ko: 날짜를 ISO 형태로 변환,1.296,0.4059,8.6817,14.7722,11.4583,75
+73,ko,2,ko: 숫자를 괄호로 감싸기,4.6973,0.2758,10.5775,17.9952,11.4583,76
+74,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4263,0.3014,11.3043,19.7059,11.4583,77
+75,ja,3,ja: ひらがな を カタカナ に 変換,1.3005,0.4483,8.5626,14.7392,11.3929,78
+76,ja,3,ja: カタカナ を ひらがな に 変換,1.7197,0.4123,6.4278,12.4543,11.3929,79
+77,ja,3,ja: 半角数字 を 全角 に,3.9514,0.2718,6.3641,13.1245,11.3929,80
+78,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7739,0.2763,8.9346,17.9472,11.4583,81
+79,base,0,base: sort tokens by length ascending,2.9405,0.3598,7.8167,16.19,11.5183,82
+80,en,1,en: keep tokens containing at least two vowels,0.2555,0.4384,4.2442,8.2058,10.8949,83
+81,en,1,en: reverse tokens then uppercase every 2nd token,3.7938,0.3266,4.356,10.1439,10.8949,84
+82,en,1,en: dedupe tokens then wrap digits with [],2.9887,0.3604,3.1228,7.2217,10.8949,85
+83,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4945,0.3809,4.0137,7.773,10.8949,86
+84,base,0,base: add << >> then sort numeric tokens descending,2.7221,0.3722,3.7487,7.4877,11.5183,87
+85,en,1,en: append #index (1-based) to each token,4.7284,0.2766,3.4597,7.1149,10.8949,88
+86,en,1,en: build acronym and append token count,4.347,0.3009,4.6137,9.2719,10.8949,89
+87,base,0,base: evaluate arithmetic expression,3.4535,0.3473,4.4869,9.233,11.5183,90
+88,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1076,7.1813,11.5183,91
+89,base,0,base: factorial -> return n!,2.4616,0.3635,6.5077,8.3203,11.5183,92
+90,base,0,base: range -> output span between max and min,4.1893,0.3,5.7948,8.2371,11.5183,93
+91,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0287,0.2614,9.2199,14.9549,11.4583,94
+92,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8518,14.9171,11.4583,95
+93,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7177,18.1466,11.4583,96
+94,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4664,19.823,11.4583,97
+95,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6865,14.8304,11.3929,98
+96,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.5229,12.5113,11.3929,99
+97,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4094,13.1799,11.3929,100
+98,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.162,11.4583,101
+99,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4173,11.5183,102
+100,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.689,8.8536,10.8949,103
+101,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4671,10.8949,104
+102,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.432,10.8949,105
+103,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8917,10.8949,106
+104,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5751,11.5183,107
+105,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1611,10.8949,108
+106,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,109
+107,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,110
+108,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,111
+109,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,112
+110,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,113
+111,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,114
+112,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,115
+113,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,116
+114,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,117
+115,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,118
+116,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,119
+117,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,120
+118,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,121
+119,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,122
+120,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,123
+121,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,124
+122,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,125
+123,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,126
+124,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,127
+125,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,128
+126,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,129
+127,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,130
+128,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,131
+129,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,132
+130,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,133
+131,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,134
+132,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,135
+133,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,136
+134,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,137
+135,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,138
+136,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,139
+137,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,140
+138,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,141
+139,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,142
+140,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,143
+141,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,144
+142,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,145
+143,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,146
+144,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,147
+145,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,148
+146,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,149
+147,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,150
+148,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,151
+149,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,152
+150,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,153
+151,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,154
+152,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,155
+153,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,156
+154,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,157
+155,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,158
+156,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,159
+157,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,160
+158,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,161
+159,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,162
+160,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,163
+161,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,164
+162,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,165
+163,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,166
+164,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,167
+165,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,168
+166,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,169
+167,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,170
+168,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,171
+169,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,172
+170,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,173
+171,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,174
+172,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,175
+173,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,176
+174,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,177
+175,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,178
+176,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,179
+177,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,180
+178,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,181
+179,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,182
+180,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,183
+181,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,184
+182,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,185
+183,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,186
+184,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,187
+185,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,188
+186,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,189
+187,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,190
+188,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,191
+189,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,192
+190,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,193
+191,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,194
+192,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,195
+193,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,196
+194,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,197
+195,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,198
+196,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,199
+197,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,200
+198,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,201
+199,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,202
+200,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,203
+201,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,204
+202,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,205
+203,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,206
+204,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,207
+205,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,208
+206,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,209
+207,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,210
+208,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,211
+209,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,212
+210,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,213
+211,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,214
+212,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,215
+213,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,216
+214,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,217
+215,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,218
+216,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,219
+217,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,220
+218,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,221
+219,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,222
+220,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,223
+221,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,224
+222,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,225
+223,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,226
+224,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,227
+225,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,228
+226,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,229
+227,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,230
+228,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,231
+229,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,232
+230,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,233
+231,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,234
+232,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,235
+233,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,236
+234,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,237
+235,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,238
+236,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,239
+237,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,240
+238,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,241
+239,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,242
+240,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,243
+241,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,244
+242,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,245
+243,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,246
+244,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,247
+245,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,248
+246,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,249
+247,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,250
+248,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,251
+249,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,252
+250,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,253
+251,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,254
+252,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,255
+253,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,256
+254,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,257
+255,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,258
+256,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,259
+257,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,260
+258,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,261
+259,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,262
+260,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,263
+261,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,264
+262,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,265
+263,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,266
+264,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,267
+265,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,268
+266,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,269
+267,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,270
+268,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,271
+269,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,272
+270,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,273
+271,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,274
+272,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,275
+273,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,276
+274,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,277
+275,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,278
+276,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,279
+277,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,280
+278,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,281
+279,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,282
+280,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,283
+281,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,284
+282,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,285
+283,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,286
+284,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,287
+285,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,288
+286,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,289
+287,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,290
+288,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,291
+289,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,292
+290,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,293
+291,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,294
+292,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,295
+293,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,296
+294,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,297
+295,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,298
+296,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,299
+297,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,300
+298,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,301
+299,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,302
+300,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,303
+301,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,304
+302,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,305
+303,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,306
+304,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,307
+305,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,308
+306,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,309
+307,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,310
+308,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,311
+309,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,312
+310,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,313
+311,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,314
+312,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,315
+313,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,316
+314,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,317
+315,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,318
+316,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,319
+317,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,320
+318,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,321
+319,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,322
+320,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,323
+321,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,324
+322,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,325
+323,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,326
+324,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,327
+325,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,328
+326,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,329
+327,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,330
+328,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,331
+329,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,332
+330,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,333
+331,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,334
+332,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,335
+333,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,336
+334,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,337
+335,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,338
+336,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,339
+337,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,340
+338,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,341
+339,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,342
+340,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,343
+341,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,344
+342,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,345
+343,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,346
+344,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,347
+345,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,348
+346,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,349
+347,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,350
+348,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,351
+349,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,352
+350,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,353
+351,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,354
+352,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,355
+353,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,356
+354,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,357
+355,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,358
+356,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,359
+357,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,360
+358,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,361
+359,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,362
+360,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,363
+361,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,364
+362,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,365
+363,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,366
+364,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,367
+365,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,368
+366,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,369
+367,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,370
+368,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,371
+369,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,372
+370,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,373
+371,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,374
+372,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,375
+373,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,376
+374,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,377
+375,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,378
+376,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,379
+377,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,380
+378,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,381
+379,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,382
+380,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,383
+381,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,384
+382,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,385
+383,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,386
+384,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,387
+385,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,388
+386,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,389
+387,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,390
+388,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,391
+389,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,392
+390,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,393
+391,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,394
+392,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,395
+393,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,396
+394,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,397
+395,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,398
+396,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,399
+397,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,400
+398,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,401
+399,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,402
+400,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,403
+401,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,404
+402,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,405
+403,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,406
+404,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,407
+405,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,408
+406,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,409
+407,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,410
+408,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,411
+409,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,412
+410,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,413
+411,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,414
+412,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,415
+413,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,416
+414,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,417
+415,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,418
+416,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,419
+417,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,420
+418,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,421
+419,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,422
+420,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,423
+421,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,424
+422,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,425
+423,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,426
+424,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,427
+425,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,428
+426,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,429
+427,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,430
+428,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,431
+429,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,432
+430,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,433
+431,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,434
+432,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,435
+433,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,436
+434,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,437
+435,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,438
+436,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,439
+437,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,440
+438,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,441
+439,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,442
+440,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,443
+441,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,444
+442,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,445
+443,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,446
+444,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,447
+445,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,448
+446,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,449
+447,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,450
+448,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,451
+449,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,452
+450,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,453
+451,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,454
+452,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,455
+453,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,456
+454,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,457
+455,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,458
+456,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,459
+457,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,460
+458,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,461
+459,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,462
+460,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,463
+461,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,464
+462,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,465
+463,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,466
+464,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,467
+465,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,468
+466,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,469
+467,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,470
+468,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,471
+469,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,472
+470,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,473
+471,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,474
+472,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,475
+473,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,476
+474,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,477
+475,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,478
+476,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,479
+477,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,480
+478,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,481
+479,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,482
+480,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,483
+481,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,484
+482,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,485
+483,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,486
+484,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,487
+485,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,488
+486,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,489
+487,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,490
+488,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,491
+489,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,492
+490,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,493
+491,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,494
+492,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,495
+493,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,496
+494,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,497
+495,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,498
+496,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,499
+497,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,500
+498,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,501
+499,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,502
+500,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,503
+501,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,504
+502,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,505
+503,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,506
+504,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,507
+505,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,508
+506,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,509
+507,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,510
+508,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,511
+509,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,512
+510,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,513
+511,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,514
+512,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,515
+513,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,516
+514,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,517
+515,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,518
+516,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,519
+517,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,520
+518,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,521
+519,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,522
+520,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,523
+521,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,524
+522,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,525
+523,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,526
+524,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,527
+525,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,528
+526,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,529
+527,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,530
+528,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,531
+529,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,532
+530,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,533
+531,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,534
+532,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,535
+533,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,536
+534,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,537
+535,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,538
+536,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,539
+537,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,540
+538,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,541
+539,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,542
+540,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,543
+541,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,544
+542,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,545
+543,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,546
+544,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,547
+545,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,548
+546,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,549
+547,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,550
+548,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,551
+549,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,552
+550,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,553
+551,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,554
+552,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,555
+553,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,556
+554,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,557
+555,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,558
+556,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,559
+557,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,560
+558,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,561
+559,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,562
+560,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,563
+561,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,564
+562,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,565
+563,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,566
+564,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,567
+565,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,568
+566,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,569
+567,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,570
+568,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,571
+569,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,572
+570,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,573
+571,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,574
+572,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,575
+573,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,576
+574,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,577
+575,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,578
+576,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,579
+577,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,580
+578,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,581
+579,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,582
+580,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,583
+581,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,584
+582,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,585
+583,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,586
+584,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,587
+585,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,588
+586,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,589
+587,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,590
+588,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,591
+589,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,592
+590,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,593
+591,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,594
+592,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,595
+593,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,596
+594,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,597
+595,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,598
+596,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,599
+597,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,600
+598,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,601
+599,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,602
+600,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,603
+601,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,604
+602,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,605
+603,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,606
+604,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,607
+605,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,608
+606,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,609
+607,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,610
+608,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,611
+609,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,612
+610,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,613
+611,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,614
+612,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,615
+613,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,616
+614,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,617
+615,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,618
+616,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,619
+617,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,620
+618,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,621
+619,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,622
+620,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,623
+621,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,624
+622,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,625
+623,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,626
+624,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,627
+625,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,628
+626,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,629
+627,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,630
+628,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,631
+629,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,632
+630,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,633
+631,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,634
+632,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,635
+633,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,636
+634,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,637
+635,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,638
+636,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,639
+637,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,640
+638,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,641
+639,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,642
+640,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,643
+641,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,644
+642,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,645
+643,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,646
+644,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,647
+645,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,648
+646,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,649
+647,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,650
+648,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,651
+649,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,652
+650,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,653
+651,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,654
+652,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,655
+653,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,656
+654,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,657
+655,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,658
+656,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,659
+657,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,660
+658,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,661
+659,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,662
+660,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,663
+661,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,664
+662,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,665
+663,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,666
+664,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,667
+665,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,668
+666,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,669
+667,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,670
+668,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,671
+669,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,672
+670,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,673
+671,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,674
+672,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,675
+673,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,676
+674,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,677
+675,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,678
+676,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,679
+677,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,680
+678,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,681
+679,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,682
+680,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,683
+681,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,684
+682,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,685
+683,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,686
+684,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,687
+685,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,688
+686,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,689
+687,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,690
+688,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,691
+689,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,692
+690,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,693
+691,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,694
+692,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,695
+693,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,696
+694,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,697
+695,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,698
+696,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,699
+697,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,700
+698,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,701
+699,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,702
+700,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,703
+701,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,704
+702,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,705
+703,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,706
+704,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,707
+705,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,708
+706,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,709
+707,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,710
+708,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,711
+709,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,712
+710,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,713
+711,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,714
+712,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,715
+713,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,716
+714,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,717
+715,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,718
+716,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,719
+717,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,720
+718,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,721
+719,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,722
+720,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,723
+721,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,724
+722,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,725
+723,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,726
+724,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,727
+725,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,728
+726,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,729
+727,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,730
+728,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,731
+729,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,732
+730,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,733
+731,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,734
+732,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,735
+733,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,736
+734,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,737
+735,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,738
+736,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,739
+737,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,740
+738,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,741
+739,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,742
+740,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,743
+741,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,744
+742,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,745
+743,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,746
+744,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,747
+745,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,748
+746,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,749
+747,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,750
+748,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,751
+749,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,752
+750,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,753
+751,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,754
+752,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,755
+753,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,756
+754,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,757
+755,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,758
+756,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,759
+757,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,760
+758,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,761
+759,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,762
+760,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,763
+761,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,764
+762,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,765
+763,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,766
+764,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,767
+765,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,768
+766,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,769
+767,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,770
+768,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,771
+769,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,772
+770,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,773
+771,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,774
+772,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,775
+773,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,776
+774,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,777
+775,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,778
+776,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,779
+777,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,780
+778,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,781
+779,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,782
+780,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,783
+781,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,784
+782,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,785
+783,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,786
+784,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,787
+785,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,788
+786,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,789
+787,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,790
+788,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,791
+789,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,792
+790,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,793
+791,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,794
+792,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,795
+793,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,796
+794,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,797
+795,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,798
+796,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,799
+797,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,800
+798,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,801
+799,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,802
+800,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,803
+801,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,804
+802,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,805
+803,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,806
+804,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,807
+805,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,808
+806,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,809
+807,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,810
+808,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,811
+809,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,812
+810,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,813
+811,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,814
+812,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,815
+813,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,816
+814,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,817
+815,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,818
+816,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,819
+817,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,820
+818,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,821
+819,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,822
+820,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,823
+821,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,824
+822,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,825
+823,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,826
+824,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,827
+825,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,828
+826,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,829
+827,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,830
+828,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,831
+829,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,832
+830,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,833
+831,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,834
+832,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,835
+833,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,836
+834,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,837
+835,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,838
+836,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,839
+837,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,840
+838,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,841
+839,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,842
+840,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,843
+841,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,844
+842,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,845
+843,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,846
+844,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,847
+845,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,848
+846,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,849
+847,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,850
+848,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,851
+849,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,852
+850,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,853
+851,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,854
+852,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,855
+853,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,856
+854,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,857
+855,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,858
+856,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,859
+857,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,860
+858,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,861
+859,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,862
+860,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,863
+861,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,864
+862,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,865
+863,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,866
+864,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,867
+865,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,868
+866,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,869
+867,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,870
+868,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,871
+869,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,872
+870,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,873
+871,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,874
+872,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,875
+873,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,876
+874,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,877
+875,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,878
+876,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,879
+877,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,880
+878,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,881
+879,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,882
+880,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,883
+881,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,884
+882,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,885
+883,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,886
+884,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,887
+885,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,888
+886,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,889
+887,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,890
+888,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,891
+889,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,892
+890,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,893
+891,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,894
+892,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,895
+893,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,896
+894,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,897
+895,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,898
+896,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,899
+897,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,900
+898,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,901
+899,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,902
+900,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,903
+901,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,904
+902,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,905
+903,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,906
+904,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,907
+905,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,908
+906,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,909
+907,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,910
+908,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,911
+909,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,912
+910,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,913
+911,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,914
+912,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,915
+913,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,916
+914,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,917
+915,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,918
+916,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,919
+917,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,920
+918,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,921
+919,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,922
+920,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,923
+921,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,924
+922,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,925
+923,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,926
+924,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,927
+925,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,928
+926,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,929
+927,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,930
+928,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,931
+929,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,932
+930,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,933
+931,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,934
+932,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,935
+933,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,936
+934,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,937
+935,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,938
+936,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,939
+937,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,940
+938,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,941
+939,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,942
+940,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,943
+941,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,944
+942,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,945
+943,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,946
+944,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,947
+945,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,948
+946,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,949
+947,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,950
+948,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,951
+949,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,952
+950,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,953
+951,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,954
+952,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,955
+953,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,956
+954,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,957
+955,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,958
+956,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,959
+957,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,960
+958,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,961
+959,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,962
+960,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,963
+961,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,964
+962,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,965
+963,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,966
+964,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,967
+965,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,968
+966,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,969
+967,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,970
+968,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,971
+969,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,972
+970,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,973
+971,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,974
+972,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,975
+973,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,976
+974,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,977
+975,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,978
+976,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,979
+977,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,980
+978,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,981
+979,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,982
+980,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,983
+981,en,1,en: reverse tokens then uppercase every 2nd token,3.7936,0.3266,4.5161,10.4673,10.8949,984
+982,en,1,en: dedupe tokens then wrap digits with [],2.9901,0.3604,3.2422,7.4321,10.8949,985
+983,en,1,en: caesar shift by 2 then toggle ASCII case every 3 tokens,2.4943,0.381,4.0776,7.8918,10.8949,986
+984,base,0,base: add << >> then sort numeric tokens descending,2.7224,0.3722,3.7816,7.5752,11.5183,987
+985,en,1,en: append #index (1-based) to each token,4.7287,0.2766,3.4768,7.1612,10.8949,988
+986,en,1,en: build acronym and append token count,4.3471,0.3009,4.6212,9.2944,10.8949,989
+987,base,0,base: evaluate arithmetic expression,3.4536,0.3473,4.4917,9.246,11.5183,990
+988,base,0,base: sumsq -> output sum of squares as sum=VALUE,3.6928,0.3286,4.1103,7.1899,11.5183,991
+989,base,0,base: factorial -> return n!,2.4615,0.3635,6.5088,8.3265,11.5183,992
+990,base,0,base: range -> output span between max and min,4.1893,0.3,5.7958,8.2423,11.5183,993
+991,ko,2,ko: 강조된 조사 후 문장 끝에 요 추가,5.0286,0.2615,9.2188,14.9556,11.4583,994
+992,ko,2,ko: 날짜를 ISO 형태로 변환,1.2962,0.4059,8.8508,14.917,11.4583,995
+993,ko,2,ko: 숫자를 괄호로 감싸기,4.6941,0.276,10.7169,18.1463,11.4583,996
+994,ko,2,ko: 토큰 순서를 뒤집고 마지막에 입니다 추가,4.4236,0.3015,11.4657,19.8226,11.4583,997
+995,ja,3,ja: ひらがな を カタカナ に 変換,1.2995,0.4484,8.6864,14.8309,11.3929,998
+996,ja,3,ja: カタカナ を ひらがな に 変換,1.7198,0.4123,6.523,12.5118,11.3929,999
+997,ja,3,ja: 半角数字 を 全角 に,3.9518,0.2718,6.4096,13.1803,11.3929,1000
+998,ko,2,ko:en mix - reverse tokens and uppercase ASCII tokens,4.7734,0.2763,9.0079,18.1621,11.4583,1001
+999,base,0,base: sort tokens by length ascending,2.9406,0.3598,7.8984,16.4174,11.5183,1002
+1000,en,1,en: keep tokens containing at least two vowels,0.3014,0.4384,4.6891,8.8538,10.8949,1003

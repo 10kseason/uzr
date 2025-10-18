@@ -67,6 +67,12 @@ class CompressedMemory:
         self._ema_loss: Optional[float] = None
         self._learn_fields: Optional[Tuple[str, str]] = None  # (key_field, target_field)
 
+        # Real-time state tracking
+        self._session_state: Dict[str, Any] = {}
+        self._input_history: List[torch.Tensor] = []
+        self._state_history: List[Dict[str, Any]] = []
+        self._max_history: int = 100
+
     # -------------------------
     # Core memory operations
     # -------------------------
@@ -277,6 +283,171 @@ class CompressedMemory:
         if not return_components:
             return prediction
         return prediction, neighbours, info
+
+    # -------------------------
+    # Real-time state tracking
+    # -------------------------
+    def update_state(self, key: str, value: Any):
+        """Update session state with a key-value pair."""
+        self._session_state[key] = value
+
+    def get_state(self, key: str, default: Any = None) -> Any:
+        """Get a value from session state."""
+        return self._session_state.get(key, default)
+
+    def clear_state(self):
+        """Clear all session state."""
+        self._session_state.clear()
+        self._input_history.clear()
+        self._state_history.clear()
+
+    def track_input(self, avg_emb: torch.Tensor, z_result: Optional[torch.Tensor] = None):
+        """Track input embedding and optionally its result for history."""
+        self._input_history.append(avg_emb.detach().cpu())
+        if len(self._input_history) > self._max_history:
+            self._input_history = self._input_history[-self._max_history:]
+
+        if z_result is not None:
+            state = {"avg_emb": avg_emb.detach().cpu(), "z": z_result.detach().cpu()}
+            self._state_history.append(state)
+            if len(self._state_history) > self._max_history:
+                self._state_history = self._state_history[-self._max_history:]
+
+    def get_or_predict_z(
+        self,
+        avg_emb: torch.Tensor,
+        z_init: Optional[torch.Tensor] = None,
+        topk: int = 4,
+        blend: float = 0.5,
+        use_predictor: bool = True,
+        key_field: str = "avg_emb",
+        target_field: str = "z_slow",
+    ) -> torch.Tensor:
+        """Get or predict z from memory using learned predictor and retrieval.
+
+        Args:
+            avg_emb: Average embedding tensor [D]
+            z_init: Initial z to use if memory has no prediction (optional)
+            topk: Number of neighbours for retrieval
+            blend: Blend factor between learned and retrieval predictions
+            use_predictor: Whether to use the learned predictor
+            key_field: Field name for embeddings in memory
+            target_field: Field name for z vectors in memory
+
+        Returns:
+            Predicted or retrieved z tensor
+        """
+        if avg_emb.dim() != 1:
+            raise ValueError("avg_emb must be a 1D tensor")
+
+        # Try to predict from memory if learning is enabled
+        if use_predictor and self.enable_learning and self.has_learner():
+            prediction = self.predict(
+                avg_emb=avg_emb,
+                topk=topk,
+                blend=blend,
+                key_field=key_field,
+                target_field=target_field,
+                return_components=False,
+            )
+            if prediction is not None:
+                self.track_input(avg_emb, prediction)
+                return prediction.to(self.device)
+
+        # Fallback to retrieval-only
+        device = torch.device(self.device)
+        avg_emb_dev = avg_emb.to(device)
+        normed = F.normalize(avg_emb_dev.unsqueeze(0), dim=-1, eps=1e-8).squeeze(0)
+
+        neighbours = self.retrieve(normed, topk=topk) if topk > 0 else []
+        if neighbours:
+            cand = [it.val.get(target_field) for it in neighbours if torch.is_tensor(it.val.get(target_field))]
+            if cand:
+                z_pred = torch.stack(cand, dim=0).mean(dim=0)
+                self.track_input(avg_emb, z_pred)
+                return z_pred.to(device)
+
+        # Final fallback to provided init or zero
+        if z_init is not None:
+            self.track_input(avg_emb, z_init)
+            return z_init.to(device)
+
+        # Return zeros if nothing else available
+        if neighbours and len(neighbours) > 0:
+            dim = neighbours[0].val.get(target_field).numel()
+            z_zero = torch.zeros(dim, device=device)
+        else:
+            z_zero = torch.zeros(128, device=device)  # default dim
+
+        self.track_input(avg_emb, z_zero)
+        return z_zero
+
+    def get_recent_context(self, n: int = 5) -> List[Dict[str, torch.Tensor]]:
+        """Get the n most recent state history entries."""
+        return self._state_history[-n:] if self._state_history else []
+
+    # -------------------------
+    # Serialization
+    # -------------------------
+    def state_dict(self) -> Dict[str, Any]:
+        """Export memory state for saving to checkpoint."""
+        state = {
+            "items": self.items,
+            "config": {
+                "max_items": self.max_items,
+                "device": self.device,
+                "enable_learning": self.enable_learning,
+                "learn_hidden": self.learn_hidden,
+                "learn_depth": self.learn_depth,
+                "learn_rate": self.learn_rate,
+                "learn_weight_decay": self.learn_weight_decay,
+                "grad_clip": self.grad_clip,
+                "ema_decay": self.ema_decay,
+                "min_train_items": self.min_train_items,
+            },
+            "learner_state": self._learner.state_dict() if self._learner is not None else None,
+            "optimizer_state": self._optimizer.state_dict() if self._optimizer is not None else None,
+            "ema_loss": self._ema_loss,
+            "learn_fields": self._learn_fields,
+        }
+        return state
+
+    def load_state_dict(self, state: Dict[str, Any]):
+        """Restore memory state from checkpoint."""
+        self.items = state.get("items", [])
+
+        # Restore learner if it was saved
+        if state.get("learner_state") is not None and state.get("learn_fields") is not None:
+            self._learn_fields = state["learn_fields"]
+            key_field, target_field = self._learn_fields
+
+            # Infer dimensions from saved items
+            for it in reversed(self.items):
+                src = it.val.get(key_field)
+                tgt = it.val.get(target_field)
+                if torch.is_tensor(src) and torch.is_tensor(tgt):
+                    in_dim = src.numel()
+                    out_dim = tgt.numel()
+
+                    self._learner = MemoryLearner(
+                        in_dim=in_dim,
+                        out_dim=out_dim,
+                        hidden_dim=self.learn_hidden,
+                        depth=self.learn_depth,
+                    ).to(self.device)
+                    self._learner.load_state_dict(state["learner_state"])
+
+                    self._optimizer = optim.Adam(
+                        self._learner.parameters(),
+                        lr=self.learn_rate,
+                        weight_decay=self.learn_weight_decay,
+                    )
+                    if state.get("optimizer_state") is not None:
+                        self._optimizer.load_state_dict(state["optimizer_state"])
+
+                    break
+
+        self._ema_loss = state.get("ema_loss")
 
 
 def make_sketch(avg_emb: torch.Tensor, z_slow: torch.Tensor, meta: Dict[str, Any] = None):

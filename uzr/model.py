@@ -68,7 +68,7 @@ class TinyEncoder(nn.Module):
 # ---- Universal Z-Rule Runner f_theta ----
 class UZRModel(nn.Module):
     def __init__(self, vocab_size: int, d_model: int = 256, z_dim: int = 128, n_head: int = 4, n_layer: int = 4, max_len: int = 128,
-                 z_think_dim: int = 64, z_lang_dim: int = 32, num_langs: int = 4):
+                 z_think_dim: int = 64, z_lang_dim: int = 32, num_langs: int = 4, identity_self_dim: int = 2, memory=None):
         super().__init__()
         self.encoder = TinyEncoder(vocab_size, d_model, n_head, n_layer, max_len)
         self.film = FiLM(z_dim, d_model)
@@ -77,20 +77,90 @@ class UZRModel(nn.Module):
         self.z_think_dim = z_think_dim
         self.z_lang_dim = z_lang_dim
         self.num_langs = num_langs
+        self.identity_self_dim = identity_self_dim
 
         self.lang_embed = nn.Embedding(num_langs, z_lang_dim)
 
-        fuse_dim = z_dim + z_think_dim + z_lang_dim + z_dim + z_dim + z_think_dim
+        # Learned identity embedding for self-awareness (e.g., "루리아")
+        self.identity_self = nn.Parameter(torch.randn(identity_self_dim) * 0.02)
+
+        # Updated fuse dimension to include identity_self interactions
+        # Original: z_dim + z_think_dim + z_lang_dim + z_dim + z_dim + z_think_dim
+        # Add: identity_self_dim + z_dim (rule*identity) + z_think_dim (think*identity)
+        fuse_dim = z_dim + z_think_dim + z_lang_dim + z_dim + z_dim + z_think_dim + identity_self_dim + z_dim + z_think_dim
         self.fuse_proj = nn.Linear(fuse_dim, z_dim)
 
         # learned z initializer for the rule channel
         self.z0 = nn.Parameter(torch.zeros(z_dim))
+
+        # Optional memory reference for real-time state tracking
+        self.memory = memory
 
     def init_z(self, batch_size: int = 1):
         return self.z0.unsqueeze(0).expand(batch_size, -1).clone().detach()
 
     def init_z_thinking(self, batch_size: int = 1):
         return self.z0.new_zeros(batch_size, self.z_think_dim)
+
+    def avg_embed(self, x: torch.Tensor) -> torch.Tensor:
+        """Compute average embedding from input tokens.
+
+        Args:
+            x: Input tokens [B, T]
+
+        Returns:
+            Average embeddings [B, D] or [D] if batch size is 1
+        """
+        with torch.no_grad():
+            h = self.encoder(x)  # [B, T, D]
+            avg = h.mean(dim=1)  # [B, D]
+            return avg.squeeze(0) if avg.size(0) == 1 else avg
+
+    def get_z_from_memory(self, x: torch.Tensor, z_init: Optional[torch.Tensor] = None,
+                          topk: int = 4, blend: float = 0.5) -> Optional[torch.Tensor]:
+        """Get z from memory based on input embeddings.
+
+        Args:
+            x: Input tokens [B, T] or [1, T]
+            z_init: Initial z if memory fails
+            topk: Number of neighbors to retrieve
+            blend: Blend factor for predictor
+
+        Returns:
+            Predicted z or None if memory not available
+        """
+        if self.memory is None:
+            return None
+
+        avg_emb = self.avg_embed(x)
+        if avg_emb.dim() > 1:
+            avg_emb = avg_emb.mean(dim=0)  # Average over batch if needed
+
+        return self.memory.get_or_predict_z(
+            avg_emb=avg_emb,
+            z_init=z_init,
+            topk=topk,
+            blend=blend,
+            use_predictor=True,
+        )
+
+    def update_memory_state(self, x: torch.Tensor, z: torch.Tensor):
+        """Update memory state with current input and z.
+
+        Args:
+            x: Input tokens [B, T]
+            z: Current z vector [D] or [B, D]
+        """
+        if self.memory is None:
+            return
+
+        avg_emb = self.avg_embed(x)
+        if avg_emb.dim() > 1:
+            avg_emb = avg_emb.mean(dim=0)
+        if z.dim() > 1:
+            z = z.mean(dim=0)
+
+        self.memory.track_input(avg_emb, z)
 
     @staticmethod
     def _pad_or_trim(vec: torch.Tensor, target_dim: int) -> torch.Tensor:
@@ -109,6 +179,8 @@ class UZRModel(nn.Module):
         if z_think.dim() == 1:
             z_think = z_think.unsqueeze(0)
 
+        batch_size = z_rule.size(0)
+
         lang_tensor = torch.as_tensor(lang_id, device=z_rule.device, dtype=torch.long)
         if lang_tensor.dim() == 0:
             lang_tensor = lang_tensor.unsqueeze(0)
@@ -126,7 +198,16 @@ class UZRModel(nn.Module):
         rule_think = z_rule * think_for_rule
         think_lang = z_think * lang_for_think
 
-        fuse = torch.cat([z_rule, z_think, lang_e, rule_lang, rule_think, think_lang], dim=-1)
+        # Add identity_self interactions
+        identity = self.identity_self.unsqueeze(0).expand(batch_size, -1)  # [B, identity_self_dim]
+        identity_for_rule = self._pad_or_trim(identity, z_rule.size(-1))
+        identity_for_think = self._pad_or_trim(identity, z_think.size(-1))
+
+        rule_identity = z_rule * identity_for_rule  # [B, z_dim]
+        think_identity = z_think * identity_for_think  # [B, z_think_dim]
+
+        fuse = torch.cat([z_rule, z_think, lang_e, rule_lang, rule_think, think_lang,
+                         identity, rule_identity, think_identity], dim=-1)
         z_fused = self.fuse_proj(fuse)
         return z_fused
 

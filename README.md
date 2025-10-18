@@ -1,5 +1,8 @@
 # UZR — Universal Z-Rule Runner Architecture
 
+https://huggingface.co/naksyu/UZR/tree/main                 <<<<<<<< MODEL
+
+
 ## 개요 (Korean)
 - **모델 파이프라인**: 입력 문자열은 바이트 단위 토크나이저로 정규화되어 BOS/EOS 토큰과 패딩이 포함된 시퀀스로 변환됩니다.【F:uzr/model.py†L10-L28】
 - **표현 학습기**: TinyEncoder 트랜스포머가 토큰 임베딩과 위치 임베딩을 결합해 문맥 표현을 만들고, FiLM 계층이 언어·추론 잠재 벡터를 결합하여 토큰별 로짓을 산출합니다.【F:uzr/model.py†L43-L146】

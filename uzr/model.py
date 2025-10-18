@@ -1,4 +1,4 @@
-
+﻿
 import math
 from typing import Optional, Tuple
 
@@ -21,9 +21,16 @@ class ByteTokenizer:
         return torch.tensor(ids + pad, dtype=torch.long)
 
     def decode(self, ids):
-        ids = [i for i in ids if i not in (self.BOS, self.EOS, 0)]
+        # Stop at first EOS, drop BOS/pad, and ignore invalid UTF-8 tails.
+        out = []
+        for i in ids:
+            if i == self.EOS:
+                break
+            if i in (self.BOS, 0):
+                continue
+            out.append(int(i))
         try:
-            return bytes(ids).decode("utf-8", errors="ignore")
+            return bytes(out).decode("utf-8", errors="ignore")
         except Exception:
             return ""
 
@@ -165,4 +172,7 @@ def confidence_from_logits(logits, target, ignore_index=0):
         # squash to [0,1] approximately
         c = torch.sigmoid(c / 5.0)
         return c
+
+
+
 

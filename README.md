@@ -1,5 +1,10 @@
 # UZR — Universal Z‑Rule Runner
 
+
+모델 링크 >>>>>> https://huggingface.co/naksyu/uzr_3brains
+
+
+
 **UZR**는 메타학습(Meta-learning)을 기반으로 한 언어 규칙 추론 시스템입니다. 단일 네트워크 `f_θ(x, z)`가 **작은 latent 벡터 `z`만 적응**시켜 few-shot 예시로부터 언어 규칙을 학습하고 적용합니다.
 
 ## 핵심 개념

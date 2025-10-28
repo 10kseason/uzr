@@ -1,5 +1,19 @@
-# tasks.py — GPT-3.5급 난이도 태스크용 드롭-인 교체본
-import random, re, unicodedata
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+KO/EN task generators and rule library (JA optional, commented).
+
+Provides:
+- Rich sample generators for Korean/English
+- Rule functions returning (callable, description)
+- Rule factories for composing harder tasks
+- sample_task() for few-shot generation (contexts + queries + description)
+"""
+
+import random
+import re
+import unicodedata
 from typing import List, Tuple, Callable, Optional
 
 # ===== Utilities / Alphabets =====
@@ -7,83 +21,100 @@ ALPH = "abcdefghijklmnopqrstuvwxyz"
 ALPH_UP = ALPH.upper()
 DIG = "0123456789"
 
-KO_JOSA = ["은","는","이","가","을","를","에","에서","에게","와","과","으로","로","도","만"]
+KO_JOSA = [
+    "은","는","이","가","을","를","과","와","에서","으로","로","에게","께서","도","만","까지","부터","에","의"
+]
 EN_STOP = {"the","a","an","and","or","but","to","of","in","on","for","with"}
+
+
+def compose(funcs: List[Callable[[str], str]]) -> Callable[[str], str]:
+    def f(x: str) -> str:
+        for g in funcs:
+            x = g(x)
+        return x
+    return f
+
+
+def wrap2(rule_ret: Tuple[Callable[[str], str], str]) -> Tuple[Callable[[str], str], str, Optional[Callable]]:
+    f, d = rule_ret
+    return f, d, None
+
 
 def rand_word(min_len=3, max_len=8, alph=ALPH):
     L = random.randint(min_len, max_len)
     return "".join(random.choice(alph) for _ in range(L))
+
 
 def rand_token():
     r = random.random()
     if r < 0.5:
         return rand_word()
     elif r < 0.8:
-        return "".join(random.choice(DIG) for _ in range(random.randint(1,5)))
+        return "".join(random.choice(DIG) for _ in range(random.randint(1, 5)))
     else:
         return random.choice(["-", "_", ":", "/", ".", ","])
+
 
 def make_sequence(n_tokens=5):
     return " ".join(rand_token() for _ in range(n_tokens))
 
+
 # ===== Base Generators =====
 def sample_en(n_tokens=5):
-    words = ["time","data","system","model","agent","rule","space","music",
-             "river","node","graph","token","future","night","dream","light",
-             "and","the","of","in","on","to","with"]
+    words = [
+        "time","data","system","model","agent","rule","space","music","river","node",
+        "graph","token","future","night","dream","light","plan","verify","deploy","iterate",
+        "merge","align","prompt","repair","secure","channel","process","queue","cache","stream",
+        "the","a","an","and","of","in","on","to","with",
+    ]
     return " ".join(random.choice(words) for _ in range(n_tokens))
 
+
 def sample_ko(n_tokens=5):
-    chunks = ["나는","오늘","데이터","모델","규칙","공간에서","노래를","듣고","있고",
-              "그리고","또는","사랑","시간","세계","실험","결과를","본다"]
+    chunks = [
+        "오늘","회의","준비","완료","모델","규칙","공간","로그","분석","결과",
+        "배포","계획","확인","추론","파이프라인","정리","데이터","전처리","품질","지표",
+        "함께","검토","예정","진행","공유","업데이트","점검","완료"
+    ]
     return " ".join(random.choice(chunks) for _ in range(n_tokens))
 
-def sample_ja(n_tokens=5):
-    chunks = ["わたしは","きょう","データ","モデル","きそく","くうかんで","おんがくを","きいて",
-              "いる","そして","または","あい","じかん","せかい","じっけん","けっかを","みる"]
-    return " ".join(random.choice(chunks) for _ in range(n_tokens))
 
-# ===== Structured Generators for “3.5-level” tasks =====
+# ===== Structured Generators =====
 MONTHS_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
 
 def sample_dates_en(n=1):
     outs = []
     for _ in range(n):
-        y = random.randint(2018, 2031); m = random.randint(1,12); d = random.randint(1,28)
+        y = random.randint(2018, 2031)
+        m = random.randint(1, 12)
+        d = random.randint(1, 28)
         f = random.choice([
-           f"{m}/{d}/{y}",                       # US
-           f"{y}-{m:02d}-{d:02d}",              # ISO
-           f"{MONTHS_EN[m-1]} {d}, {y}",        # Mon D, YYYY
+            f"{m}/{d}/{y}",  # US
+            f"{y}-{m:02d}-{d:02d}",  # ISO
+            f"{MONTHS_EN[m-1]} {d}, {y}",  # Mon D, YYYY
         ])
         outs.append(f"meet at {f} with {rand_word()}")
     return " ".join(outs)
 
+
 def sample_dates_ko(n=1):
     outs = []
     for _ in range(n):
-        y = random.randint(2018, 2031); m = random.randint(1,12); d = random.randint(1,28)
+        y = random.randint(2018, 2031)
+        m = random.randint(1, 12)
+        d = random.randint(1, 28)
         f = random.choice([
-           f"{y}년 {m}월 {d}일",
-           f"{y}.{m:02d}.{d:02d}",
-           f"{m}월{d}일 {y}년",
+            f"{y}년 {m}월 {d}일",
+            f"{y}.{m:02d}.{d:02d}",
+            f"{m}월 {d}일 {y}년",
         ])
-        outs.append(f"약속 {f} 확인")
+        outs.append(f"일정 {f} 확인")
     return " ".join(outs)
 
-def sample_dates_ja(n=1):
-    outs = []
-    for _ in range(n):
-        y = random.randint(2018, 2031); m = random.randint(1,12); d = random.randint(1,28)
-        f = random.choice([
-           f"{y}年{m}月{d}日",
-           f"{y}/{m:02d}/{d:02d}",
-        ])
-        outs.append(f"予定 {f} チェック")
-    return " ".join(outs)
 
 def sample_expr(n_terms=3):
-    # e.g., "calc(12 + 3 * 4)"  or "12+5*2"
-    ops = ["+","-","*"]
+    ops = ["+", "-", "*"]
     nums = [str(random.randint(0, 99)) for _ in range(n_terms)]
     expr = nums[0]
     for i in range(1, n_terms):
@@ -92,27 +123,22 @@ def sample_expr(n_terms=3):
         expr = f"calc({expr})"
     return expr
 
+
 def sample_codeswitch_ko_en(n_tokens=6):
-    # mix Korean and ASCII tokens; good for selective transforms
-    ko = ["오늘","회의","시간","확인","요청","모델","규칙"]
+    ko = ["오늘","회의","모델","규칙","데이터","결과","배포"]
     en = ["token","rule","graph","system","light","music","node"]
     seq = []
     for _ in range(n_tokens):
-        seq.append(random.choice(ko if random.random()<0.5 else en))
+        seq.append(random.choice(ko if random.random() < 0.5 else en))
     return " ".join(seq)
 
-def sample_codeswitch_ja_en(n_tokens=6):
-    ja = ["予定","時間","確認","規則","モデル","世界","結果"]
-    en = ["token","rule","graph","system","light","music","node"]
-    seq = []
-    for _ in range(n_tokens):
-        seq.append(random.choice(ja if random.random()<0.5 else en))
-    return " ".join(seq)
 
-# ===== Language-agnostic Rules (simple) =====
+# ===== Language-agnostic Rules =====
 def rule_prefix_suffix(prefix="<<", suffix=">>"):
-    def f(x: str): return f"{prefix}{x}{suffix}"
+    def f(x: str):
+        return f"{prefix}{x}{suffix}"
     return f, f"prefix='{prefix}' suffix='{suffix}'"
+
 
 def rule_uppercase_every_k(k=2):
     def f(x: str):
@@ -122,293 +148,359 @@ def rule_uppercase_every_k(k=2):
         return " ".join(toks)
     return f, f"uppercase every {k}th token"
 
+
 def rule_reverse_tokens():
     def f(x: str):
         return " ".join(reversed(x.split()))
     return f, "reverse token order"
 
+
 def rule_surround_numbers(l="[", r="]"):
+    num_pat = re.compile(r"\d+")
     def f(x: str):
-        out = []
-        for tok in x.split():
-            if tok.isdigit():
-                out.append(f"{l}{tok}{r}")
-            else:
-                out.append(tok)
-        return " ".join(out)
-    return f, f"surround numbers with {l} {r}"
+        return num_pat.sub(lambda m: f"{l}{m.group(0)}{r}", x)
+    return f, f"surround digits with {l}{r}"
+
 
 def rule_toggle_case_ascii(step=2):
+    def tog(s: str):
+        out = []
+        for i, ch in enumerate(s):
+            if not ch.isascii() or not ch.isalpha():
+                out.append(ch)
+                continue
+            if (i // step) % 2 == 0:
+                out.append(ch.swapcase())
+            else:
+                out.append(ch)
+        return "".join(out)
     def f(x: str):
-        toks = x.split()
-        for i, t in enumerate(toks):
-            if t.isascii() and t.isalpha() and (i % step == 0):
-                toks[i] = t.swapcase()
-        return " ".join(toks)
-    return f, f"toggle ASCII case every {step} tokens"
+        return " ".join(tog(t) for t in x.split())
+    return f, f"toggle ASCII case every {step}"
+
 
 def rule_sort_numeric_tokens(ascending=True):
     def f(x: str):
         toks = x.split()
-        idx_num = [(i,int(t)) for i,t in enumerate(toks) if t.isdigit()]
-        sorted_vals = sorted([v for _,v in idx_num], reverse=not ascending)
-        out = toks[:]
-        # put back sorted numbers at numeric positions only
-        j=0
-        for i,_ in idx_num:
-            out[i] = str(sorted_vals[j]); j+=1
-        return " ".join(out)
-    d = "sort numeric tokens asc" if ascending else "sort numeric tokens desc"
-    return f, d
+        nums = [int(t) for t in toks if t.isdigit()]
+        others = [t for t in toks if not t.isdigit()]
+        nums.sort(reverse=not ascending)
+        return " ".join(others + [str(n) for n in nums])
+    return f, ("sort numbers asc" if ascending else "sort numbers desc")
+
 
 def rule_dedupe_preserve_order():
     def f(x: str):
-        seen=set(); out=[]
-        for t in x.split():
-            if t not in seen:
-                seen.add(t); out.append(t)
+        out = []
+        prev = None
+        for tok in x.split():
+            if tok != prev:
+                out.append(tok)
+            prev = tok
         return " ".join(out)
-    return f, "dedupe tokens (stable)"
+    return f, "dedupe consecutive tokens"
+
 
 def rule_caesar(shift=1):
-    def shift_char(c):
+    def shift_char(c: str) -> str:
         if c in ALPH:
-            i = (ALPH.index(c) + shift) % 26; return ALPH[i]
+            i = (ALPH.index(c) + shift) % 26
+            return ALPH[i]
         if c in ALPH_UP:
-            i = (ALPH_UP.index(c) + shift) % 26; return ALPH_UP[i]
+            i = (ALPH_UP.index(c) + shift) % 26
+            return ALPH_UP[i]
         return c
-    def f(x: str): return "".join(shift_char(c) for c in x)
+    def f(x: str):
+        return "".join(shift_char(c) for c in x)
     return f, f"caesar shift {shift}"
 
+
 # ===== Korean Rules =====
-def rule_ko_emphasize_josa(L="«", R="»"):
+def rule_ko_emphasize_josa():
+    pat = re.compile(r"\b(" + "|".join(map(re.escape, KO_JOSA)) + r")\b")
     def f(x: str):
-        out = x
-        for j in KO_JOSA:
-            out = out.replace(" "+j+" ", f" {L}{j}{R} ")
-        return out
+        return pat.sub(lambda m: f"«{m.group(1)}»", x)
     return f, "ko: emphasize josa"
+
 
 def rule_ko_append_yo():
     def f(x: str):
-        x = x.strip()
-        if len(x)==0: return x
-        if x.endswith(("요","요.","요!","요?")): return x
-        return x + "요"
-    return f, "ko: append polite '요'"
+        s = x.strip()
+        return s if s.endswith("요") else s + " 요"
+    return f, "ko: append 요"
 
-def rule_ko_kdigit_box(l="【", r="】"):
+
+def rule_ko_kdigit_box(l="[", r="]"):
+    num_pat = re.compile(r"\d+")
     def f(x: str):
-        return "".join((l+c+r) if c.isdigit() else c for c in x)
-    return f, "ko: box digits"
+        return num_pat.sub(lambda m: f"{l}{m.group(0)}{r}", x)
+    return f, "ko: wrap digits with brackets"
 
-# Date → ISO (YYYY-MM-DD) for Korean strings
+
 def rule_ko_date_to_iso():
-    ko_patterns = [
-        re.compile(r"(\d{4})[.]? ?(\d{1,2})[.]? ?(\d{1,2})[일]?", re.U),
-        re.compile(r"(\d{4})[년]\s*(\d{1,2})[월]\s*(\d{1,2})[일]?", re.U),
-        re.compile(r"(\d{1,2})[월]\s*(\d{1,2})[일]\s*(\d{4})[년]", re.U),
-    ]
-    def norm(y,m,d): return f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
-    def repl(m):
-        g=m.groups()
-        if len(g)==3: 
-            # handle 2 patterns
-            if "년" in m.re.pattern:
-                return norm(g[0],g[1],g[2])
-            if "월]" in m.re.pattern or "월]" not in m.re.pattern:
-                return norm(g[0],g[1],g[2])
-        return m.group(0)
-    def f(x:str):
-        y=x
-        for pat in ko_patterns:
-            y = pat.sub(lambda m: norm(*m.groups()[0:3]) if len(m.groups())>=3 else m.group(0), y)
-        return y
+    re_dot = re.compile(r"(\d{4})\.(\d{1,2})\.(\d{1,2})")
+    re_kr = re.compile(r"(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일")
+    def f(x: str):
+        x = re_dot.sub(lambda m: f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}", x)
+        x = re_kr.sub(lambda m: f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}", x)
+        return x
     return f, "ko: date → ISO"
 
-# ===== English Rules =====
+
+_CHO = [chr(c) for c in range(0x1100, 0x1113)]
+_JUNG = [chr(c) for c in range(0x1161, 0x1176)]
+_JONG = ["\0"] + [chr(c) for c in range(0x11A8, 0x11C3)]
+
+
+def has_jongseong(syll: str) -> bool:
+    code = ord(syll)
+    if 0xAC00 <= code <= 0xD7A3:
+        jong = (code - 0xAC00) % 28
+        return jong != 0
+    return False
+
+
+def rule_ko_decompose_jamo(sep="/"):
+    def decompose(ch: str) -> str:
+        code = ord(ch)
+        if 0xAC00 <= code <= 0xD7A3:
+            s_index = code - 0xAC00
+            cho = _CHO[s_index // 588]
+            jung = _JUNG[(s_index % 588) // 28]
+            jong_idx = s_index % 28
+            jong = _JONG[jong_idx] if jong_idx else ""
+            parts = [cho, jung] + ([jong] if jong else [])
+            return sep.join(parts)
+        return ch
+    def f(x: str):
+        return " ".join("".join(decompose(ch) for ch in token) for token in x.split())
+    return f, "ko: decompose jamo"
+
+
+def rule_ko_compose_jamo(sep="/"):
+    def compose_token(tok: str) -> str:
+        parts = tok.split(sep)
+        if 2 <= len(parts) <= 3 and all(parts):
+            try:
+                cho = _CHO.index(parts[0]); jung = _JUNG.index(parts[1])
+                jong = _JONG.index(parts[2]) if len(parts) == 3 else 0
+                code = 0xAC00 + (cho * 588) + (jung * 28) + jong
+                return chr(code)
+            except ValueError:
+                return tok
+        return tok
+    def f(x: str):
+        return " ".join(compose_token(t) for t in x.split())
+    return f, "ko: compose jamo"
+
+
+def rule_ko_fix_josa():
+    pat = re.compile(r"([가-힣])\((은/는|이/가|을/를)\)")
+    def pick(ch: str, pair: str) -> str:
+        jong = has_jongseong(ch)
+        if pair == "은/는":
+            return "은" if jong else "는"
+        if pair == "이/가":
+            return "이" if jong else "가"
+        if pair == "을/를":
+            return "을" if jong else "를"
+        return pair
+    def f(x: str):
+        return pat.sub(lambda m: m.group(1) + pick(m.group(1), m.group(2)), x)
+    return f, "ko: josa auto-correct"
+
+
+def sample_ko_with_josa(n=2):
+    nouns = ["사과","바나나","학생","시간","결과","모델","규칙","예전","음악"]
+    templates = [
+        "{n}(은/는) 준비 완료",
+        "{n}(이/가) 필요해요",
+        "{n}(을/를) 확인",
+    ]
+    return " ".join(random.choice(templates).format(n=random.choice(nouns)) for _ in range(n))
+
+
+# ===== English Rules (richer) =====
 def rule_en_title_case_skip_stops():
     def title_word(w):
-        if w.lower() in EN_STOP: return w.lower()
+        if w.lower() in EN_STOP:
+            return w.lower()
         return w[:1].upper() + w[1:]
     def f(x: str):
         toks = x.split()
         return " ".join(title_word(w) for w in toks)
     return f, "en: title case (skip stops)"
 
+
 def rule_en_replace_and_amp():
-    def f(x: str): return x.replace(" and ", " & ")
+    def f(x: str):
+        return x.replace(" and ", " & ")
     return f, "en: replace 'and' with '&'"
 
+
 def rule_en_date_to_iso():
-    # support: M/D/YYYY , Mon D, YYYY
-    mon_map = {m:i+1 for i,m in enumerate(MONTHS_EN)}
+    mon_map = {m: i + 1 for i, m in enumerate(MONTHS_EN)}
     re_us = re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b")
     re_mon = re.compile(r"\b([A-Z][a-z]{2}) (\d{1,2}), (\d{4})\b")
-    def f(x:str):
+    def f(x: str):
         x = re_us.sub(lambda m: f"{int(m.group(3)):04d}-{int(m.group(1)):02d}-{int(m.group(2)):02d}", x)
         x = re_mon.sub(lambda m: f"{int(m.group(3)):04d}-{mon_map[m.group(1)]:02d}-{int(m.group(2)):02d}", x)
         return x
     return f, "en: date → ISO"
 
-# ===== Japanese Rules =====
-def hira_to_kata(s: str):
-    out=[]
-    for ch in s:
-        code=ord(ch)
-        if 0x3041 <= code <= 0x3096: out.append(chr(code+0x60))
-        else: out.append(ch)
-    return "".join(out)
 
-def kata_to_hira(s: str):
-    out=[]
-    for ch in s:
-        code=ord(ch)
-        if 0x30A1 <= code <= 0x30F6: out.append(chr(code-0x60))
-        else: out.append(ch)
-    return "".join(out)
+def rule_en_pluralize_simple():
+    def pluralize(w):
+        if not w.isalpha():
+            return w
+        wl = w.lower()
+        if re.search(r"(s|x|z|ch|sh)$", wl):
+            return w + "es"
+        if re.search(r"[^aeiou]y$", wl):
+            return w[:-1] + "ies"
+        return w + "s"
+    def f(x: str):
+        return " ".join(pluralize(t) for t in x.split())
+    return f, "en: pluralize (simple)"
 
-def rule_ja_hira2kata(): return (lambda x: hira_to_kata(x), "ja: hiragana→katakana")
-def rule_ja_kata2hira(): return (lambda x: kata_to_hira(x), "ja: katakana→hiragana")
 
-def rule_ja_fullwidth_digits():
-    def f(x:str):
-        out=[]
-        for ch in x:
-            if ch.isdigit(): out.append(chr(ord(ch)+0xFF10-ord('0')))
-            else: out.append(ch)
-        return "".join(out)
-    return f, "ja: fullwidth digits"
+def rule_en_past_tense_simple():
+    def past(w):
+        if not w.isalpha():
+            return w
+        wl = w.lower()
+        if wl.endswith("e"):
+            return w + "d"
+        if re.search(r"[^aeiou]y$", wl):
+            return w[:-1] + "ied"
+        return w + "ed"
+    def f(x: str):
+        return " ".join(past(t) for t in x.split())
+    return f, "en: past tense (simple)"
 
-def rule_ja_date_to_iso():
-    re_ja = re.compile(r"(\d{4})年(\d{1,2})月(\d{1,2})日")
-    re_sl = re.compile(r"(\d{4})/(\d{1,2})/(\d{1,2})")
-    def f(x:str):
-        x = re_ja.sub(lambda m: f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}", x)
-        x = re_sl.sub(lambda m: f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}", x)
-        return x
-    return f, "ja: date → ISO"
 
-# ===== Math Rule (language-agnostic but “3.5-level”) =====
-SAFE_EXPR = re.compile(r"^[0-9+\-*\s()]+$")
+def rule_en_hyphenate_vcv():
+    vowels = set("aeiouAEIOU")
+    def hyph(w):
+        if not w.isalpha() or len(w) < 4:
+            return w
+        for i in range(1, len(w) - 1):
+            if (w[i - 1] not in vowels) and (w[i] in vowels) and (w[i + 1] not in vowels):
+                return w[: i + 1] + "-" + w[i + 1 :]
+        return w
+    def f(x: str):
+        return " ".join(hyph(t) for t in x.split())
+    return f, "en: hyphenate VCV"
 
+
+def rule_en_american_to_british():
+    MAP = {"color": "colour", "favorite": "favourite", "organize": "organise", "analyze": "analyse"}
+    pat = re.compile(r"\b(" + "|".join(MAP.keys()) + r")\b", re.I)
+    def f(x: str):
+        def repl(m):
+            w = m.group(1)
+            rep = MAP.get(w.lower(), w)
+            if w.istitle():
+                return rep.title()
+            if w.isupper():
+                return rep.upper()
+            return rep
+        return pat.sub(repl, x)
+    return f, "en: American→British (demo)"
+
+
+# ===== Japanese Rules (optional) =====
 def rule_eval_simple_math():
-    # evaluate expressions like "12+3*4" or "calc(12+3*4)"
-    def eval_expr(s:str)->str:
-        s = s.strip()
-        if s.startswith("calc(") and s.endswith(")"):
-            s = s[5:-1]
-        s = s.replace(" ", "")
-        if not SAFE_EXPR.match(s): return s
-        # very restricted eval
-        return str(eval(s, {"__builtins__":None}, {}))
-    def f(x:str): return eval_expr(x)
-    return f, "math: eval simple expression"
+    # Evaluate simple expressions optionally wrapped in calc(...)
+    expr_pat = re.compile(r"calc\(([^)]+)\)|([0-9+\- *]+)")
+    def f(x: str):
+        def _eval(e: str) -> str:
+            e = re.sub(r"[^0-9+\- *]", "", e)
+            try:
+                return str(int(eval(e)))  # no variables
+            except Exception:
+                return e
+        def repl(m):
+            s = m.group(1) or m.group(2) or ""
+            return _eval(s)
+        return expr_pat.sub(repl, x)
+    return f, "math: eval"
 
-# ===== Rule Composition =====
-def compose(fs: List[Callable[[str], str]]):
-    def f(x:str):
-        y=x
-        for g in fs:
-            y = g(y)
-        return y
-    return f
 
-# For factories that may override generator
-FactoryRet = Tuple[Callable[[str],str], str, Optional[Callable[..., str]]]
+# ===== Rule Factories for sample_task =====
+def FACTORY_MATH():
+    return (rule_eval_simple_math()[0], "math: eval", lambda n_tokens=6: sample_expr(n_terms=random.randint(2, 4)))
 
-def wrap2(f_desc):
-    f, desc = f_desc
-    return (f, desc, None)
 
-# ===== Rule Factories =====
 RULE_FACTORIES_BASE = [
-    lambda: wrap2(rule_prefix_suffix(prefix=random.choice(["<<","[[","("]), 
-                                     suffix=random.choice([">>","]]",")"]))),
-    lambda: wrap2(rule_uppercase_every_k(k=random.randint(2,4))),
+    lambda: wrap2(rule_prefix_suffix(prefix=random.choice(["<<","[[","(" ]), suffix=random.choice([">>","]]",")"]))),
+    lambda: wrap2(rule_uppercase_every_k(k=random.randint(2, 3))),
     lambda: wrap2(rule_reverse_tokens()),
-    lambda: wrap2(rule_surround_numbers(l=random.choice(["{","<","["]), r=random.choice(["}",">","]"]))),
-    lambda: wrap2(rule_toggle_case_ascii(step=random.randint(2,3))),
-    lambda: wrap2(rule_sort_numeric_tokens(ascending=random.random()<0.5)),
+    lambda: wrap2(rule_surround_numbers(l=random.choice(["{","[","<"]), r=random.choice(["}","]",">"]))),
+    lambda: wrap2(rule_toggle_case_ascii(step=random.randint(2, 3))),
+    lambda: wrap2(rule_sort_numeric_tokens(ascending=random.random() < 0.5)),
     lambda: wrap2(rule_dedupe_preserve_order()),
-    lambda: wrap2(rule_caesar(shift=random.randint(1,3))),
+    lambda: wrap2(rule_caesar(shift=random.randint(1, 3))),
 ]
+
 
 RULE_FACTORIES_KO = [
     lambda: wrap2(rule_ko_emphasize_josa()),
     lambda: wrap2(rule_ko_append_yo()),
     lambda: wrap2(rule_ko_kdigit_box()),
-    # Advanced KO (generator override)
-    lambda: (rule_ko_date_to_iso()[0], "ko: date → ISO",
-             lambda n_tokens=6: sample_dates_ko(n=2)),
+    lambda: (rule_ko_date_to_iso()[0], "ko: date → ISO", lambda n_tokens=6: sample_dates_ko(n=2)),
+    lambda: wrap2(rule_ko_decompose_jamo(sep="/")),
+    lambda: wrap2(rule_ko_compose_jamo(sep="/")),
+    lambda: (rule_ko_fix_josa()[0], "ko: josa auto-correct", lambda n_tokens=6: sample_ko_with_josa(n=2)),
 ]
+
 
 RULE_FACTORIES_EN = [
     lambda: wrap2(rule_en_title_case_skip_stops()),
     lambda: wrap2(rule_en_replace_and_amp()),
-    lambda: (rule_en_date_to_iso()[0], "en: date → ISO",
-             lambda n_tokens=6: sample_dates_en(n=2)),
+    lambda: (rule_en_date_to_iso()[0], "en: date → ISO", lambda n_tokens=6: sample_dates_en(n=2)),
+    lambda: wrap2(rule_en_pluralize_simple()),
+    lambda: wrap2(rule_en_past_tense_simple()),
+    lambda: wrap2(rule_en_hyphenate_vcv()),
+    lambda: wrap2(rule_en_american_to_british()),
 ]
 
-RULE_FACTORIES_JA = [
-    lambda: wrap2(rule_ja_hira2kata()),
-    lambda: wrap2(rule_ja_kata2hira()),
-    lambda: wrap2(rule_ja_fullwidth_digits()),
-    lambda: (rule_ja_date_to_iso()[0], "ja: date → ISO",
-             lambda n_tokens=6: sample_dates_ja(n=2)),
-]
-
-# Optional hard task: expression evaluation (used across langs/base)
-def FACTORY_MATH():
-    return (rule_eval_simple_math()[0], "math: eval", lambda n_tokens=6: sample_expr(n_terms=random.randint(2,4)))
 
 # ===== Sample Task =====
-def sample_task(n_context=6, n_query=8, n_tokens=5) -> Tuple[List[Tuple[str,str]], List[Tuple[str,str]], str]:
-    """
-    Few-shot function induction:
-      - pick lang bucket
-      - pick either: (a) advanced single rule, or (b) 2~3 rule composition from safe set
-      - optionally use generator override for structured inputs (dates/math)
-    """
-    lang = random.choice(["en","ko","ja","base"])
+def sample_task(n_context=6, n_query=8, n_tokens=5) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]], str]:
+    """Build few-shot contexts and queries with description."""
+    lang = random.choice(["en", "ko", "base"])  # JA deferred
     if lang == "en":
         pool = RULE_FACTORIES_EN + RULE_FACTORIES_BASE[:2] + [FACTORY_MATH]
         gen_default = sample_en
     elif lang == "ko":
         pool = RULE_FACTORIES_KO + RULE_FACTORIES_BASE[:2] + [FACTORY_MATH]
         gen_default = sample_ko
-    elif lang == "ja":
-        pool = RULE_FACTORIES_JA + RULE_FACTORIES_BASE[:1] + [FACTORY_MATH]
-        gen_default = sample_ja
     else:
         pool = RULE_FACTORIES_BASE + [FACTORY_MATH]
         gen_default = make_sequence
 
-    # Choose advanced vs composition
-    advanced_pick = random.random() < 0.55  # bias to harder cases
+    advanced_pick = random.random() < 0.55
     gen = gen_default
     desc = ""
 
     if advanced_pick:
         f1, d1, g1 = random.choice(pool)()
-        # allow mild composition with one safe post-step
         if random.random() < 0.35:
             f2, d2, _ = random.choice(RULE_FACTORIES_BASE)()
             f = compose([f1, f2])
-            desc = f"{d1} ∘ {d2}"
+            desc = f"{d1} → {d2}"
         else:
             f = f1; desc = d1
         if g1 is not None:
             gen = g1
     else:
-        # 2~3 rule composition from safe set
-        k = random.choice([2,3])
+        k = random.choice([2, 3])
         picks = [random.choice(RULE_FACTORIES_BASE)() for _ in range(k)]
         fs = [p[0] for p in picks]
         f = compose(fs)
-        desc = " ∘ ".join(p[1] for p in picks)
+        desc = " → ".join(p[1] for p in picks)
 
-    # Build contexts/queries
     C, Q = [], []
     for _ in range(n_context):
         s = gen(n_tokens=n_tokens)
@@ -418,3 +510,4 @@ def sample_task(n_context=6, n_query=8, n_tokens=5) -> Tuple[List[Tuple[str,str]
         Q.append((s, f(s)))
 
     return C, Q, f"{lang}: {desc}"
+

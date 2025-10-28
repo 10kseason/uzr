@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "format": "codex-cli.memory",
+  "user": {
+    "preferred_language": "ko"
+  },
+  "project": {
+    "name": "uzr",
+    "paths": { "root": "." }
+  },
+  "facts": [
+    {
+      "type": "policy",
+      "key": "change_documentation",
+      "value": "모든 작업 종료 시 CHANGELOG.md에 변경 요약을 추가하고, 중요한 정책/선호/결정을 facts에 반영한다. 민감정보 저장 금지.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "manual",
+      "key": "luria_features",
+      "value": "Luria 매뉴얼 반영: kill switch, warmup, tail-bucket(2/100), write budget(10/100), surprise percentile→beta, 표준 로그 스키마, exploration_pulse, set_policy_thresholds API, tail-bucket 프로모션.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "manual",
+      "key": "luria_followups_phase2",
+      "value": "need check more.txt 적용: softmax_temp=0.07, lambda_penalty=0.22, write_per_100=6, warmup-stage 금지, 재사용 패널티+쿨다운, 2PC 로깅, rebalance 승격 스코어 개선, model/runners topk=None→mem.topk.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "manual",
+      "key": "hyper_meta_module",
+      "value": "Hyper-meta-update 적용: meta_core.py 추가(SelfEvalHead, abstain, error_tagger, reflection) 및 config/meta.json 기본 임계값. 기존 코드 수정 없음.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "decision",
+      "key": "selfeval_integration",
+      "value": "SelfEvalHead를 model.py에 선택적으로 통합(use_self_eval=True). infer_longrun(_standalone)에서 SelfEval 기반 conf/entropy/brier/abstain CSV 로깅 확장.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "convention",
+      "key": "logu_csv_naming",
+      "value": "기본 CSV 경로는 logu/<YYYYMMDD_HHMMSS>_s{inner}_t{turns}_{ckpt_stem}.csv 자동 생성. wrapper도 동일 규칙으로 전달.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "manual",
+      "key": "inner_step_adjust_by_model",
+      "value": "Self-eval conf 기반 inner_steps 동적 결정(로그 시그모이드 매핑). 조기종료(conf>=0.8). CSV에 conf0/chosen_steps/tries/best_conf/gate_pass/compute_tokens 추가.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "convention",
+      "key": "self_eval_toggle",
+      "value": "logged 멀티턴 래퍼에 --self_eval {on,off} 플래그 추가. 모델은 UZR_SELF_EVAL env(0/1/off/on)로 SelfEvalHead 초기화 여부 결정.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "decision",
+      "key": "logged_wrapper_refresh",
+      "value": "infer_longrun_standalone_logged.py를 래퍼로 교체(원본 파일의 깨진 인코딩/인자 라인으로 파싱 불가). 래퍼는 underlying runner로 위임, 요약 CSV 자동 네이밍 및 SelfEval 토글 전달.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "manual",
+      "key": "logged_use_updates",
+      "value": "infer_longturn-logged-use.py: --self_eval 플래그 추가 및 UZR_SELF_EVAL 전파, summary CSV 자동 네이밍(logu 규칙), 초기 conf 기반 inner-steps 동적 조절과 조기 종료, CSV에 관련 컬럼 추가.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "manual",
+      "key": "ko_challenges",
+      "value": "challenge suite에 한국어 과제 2종 추가(#index 부착, 길이순 정렬). suite 크기 검증은 >=20로 완화.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "decision",
+      "key": "train_meta_3brains_alignment",
+      "value": "train_meta_3brains.py: meta_core 통합(SelfEval 토글, abstain 게이트, Brier 정규화), 요약 CSV(logu 자동 네이밍), memory.add_with_policy/ rebalance 사용, resume는 strict=False.",
+      "since": "2025-10-21"
+    },
+    {
+      "type": "manual",
+      "key": "cli_luria_teaching_docs_alignment",
+      "value": "uzr-cli-teaching-step*.txt 검토 완료: CLI 주요 기능(/save,/load,/saved, CSV 토큰/지표, autosave, weights_only 호환, 견고한 /saved 파서)이 cli_luria.py에 반영됨.",
+      "since": "2025-10-25"
+    },
+    {
+      "type": "decision",
+      "key": "cli_luria_memory_persistence",
+      "value": "CLI 세션 체크포인트에 memory(state_dict)를 포함하고, /load 및 --resume 시 복원. 종료 훅(atexit+SIGINT/SIGTERM)으로 세션/트레인-호환 스냅샷을 항상 저장. autosave는 두 포맷 모두 저장.",
+      "since": "2025-10-26"
+    },
+    {
+      "type": "decision",
+      "key": "memory_rt_state_serialization",
+      "value": "CompressedMemory.state_dict에 rt_state(session_state, state_history, input_history)를 추가하고 load_state_dict에서 복원하여 대화 컨텍스트를 보존(텐서는 CPU 저장).",
+      "since": "2025-10-26"
+    },
+    {
+      "type": "decision",
+      "key": "cli_decoding_sampling_gpu",
+      "value": "CLI 디코딩을 argmax→샘플링(temperature/top-p/반복패널티)로 교체하고, --device cuda 및 autocast 지원. generate_tokens 추가 및 predict 경로 교체.",
+      "since": "2025-10-26"
+    },
+    {
+      "type": "decision",
+      "key": "cli_abstain_gating",
+      "value": "Self-eval(conf)+엔트로피 기반 보류 게이트 추가: --abstain on/off, conf_min, ent_max, message. maybe_abstain/AbstainThresholds 사용.",
+      "since": "2025-10-26"
+    },
+    {
+      "type": "decision",
+      "key": "dockerized_cli",
+      "value": "Dockerfile(pytorch CPU), docker/entrypoint.sh, docker/healthcheck.sh, docker-compose.yml 추가. env→CLI 플래그 매핑, /app/luria-log 볼륨, healthcheck와 restart:always로 상시 실행 가능.",
+      "since": "2025-10-26"
+    }
+  ],
+  "commands": {
+    "changelog_append": "Append a dated entry summarizing changed files and rationale to CHANGELOG.md",
+    "memory_update": "Update codex.memory.json facts/todos when new persistent rules or decisions emerge"
+  },
+  "todos": [
+    {
+      "title": "2PC 롤백 경로 구현",
+      "detail": "미니 벤치 실패 시 자동 롤백 및 rollbacks.csv 로깅 연결",
+      "status": "planned"
+    },
+    {
+      "title": "메모리 런타임 히스토리 직렬화(선택)",
+      "detail": "CompressedMemory.state_dict/load_state_dict에 rt_state(session/state/input_history) 직렬화 옵션 추가 검토.",
+      "status": "done"
+    }
+  ]
+}

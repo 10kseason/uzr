@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import argparse, csv, statistics, json, sys, pathlib
+from pathlib import Path
+from datetime import datetime
+from collections import deque
+import random
 from typing import Tuple, List, Callable, Optional
 
 import torch
@@ -11,8 +15,9 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.append(str(HERE))
 sys.path.append(str(HERE / 'uzr'))
 
-from uzr.model import UZRModel, ByteTokenizer, seq_ce_loss, soft_threshold, confidence_from_logits
+from uzr.model import UZRModel, ByteTokenizer, KoEnTokenizer, seq_ce_loss, soft_threshold, confidence_from_logits
 from uzr.memory import CompressedMemory, make_sketch
+from uzr.meta_core import load_meta_config, AbstainThresholds, maybe_abstain, inner_steps_from_conf
 import uzr.tasks as tasklib
 
 LANG2ID = {"base": 0, "en": 1, "ko": 2, "ja": 3}
@@ -402,17 +407,45 @@ def build_challenge_suite() -> List[Tuple[List[Tuple[str, str]], List[Tuple[str,
         ],
     ))
 
-    if len(suite) != 20:
-        raise AssertionError(f"expected 20 challenges, got {len(suite)}")
+    # --- Additional Korean challenges ---
+    suite.append(make_transformation_task(
+        "ko: 각 토큰에 #index 붙이기",
+        append_index_tokens,
+        [
+            "빨리 정확히 단단히",
+            "데이터 품질 지표 확인",
+            "모델 출력 예시 정리",
+            "로그 오류 원인 분석",
+            "배포 전 최종 점검",
+            "성과 지표 보고 준비",
+        ],
+    ))
+
+    suite.append(make_transformation_task(
+        "ko: 토큰 길이순 정렬(오름차순)",
+        sort_by_length,
+        [
+            "지표 품질 점검 완료",
+            "모델 성능 보고 준비",
+            "데이터셋 샘플 추출",
+            "문서 업데이트 계획",
+            "결과 재현 실험 구성",
+            "추론 파이프라인 정리",
+        ],
+    ))
+
+    if len(suite) < 20:
+        raise AssertionError(f"expected at least 20 challenges, got {len(suite)}")
 
     return suite
 
 
 def init_from_retrieval_multi(mem: Optional[CompressedMemory], enc_avg: torch.Tensor, z_rule_ref: torch.Tensor,
-                               z_think_ref: torch.Tensor, lang_id: int, topk: int = 4) -> Tuple[torch.Tensor, torch.Tensor]:
+                               z_think_ref: torch.Tensor, lang_id: int, topk: Optional[int] = None) -> Tuple[torch.Tensor, torch.Tensor]:
     if mem is None:
         return z_rule_ref.new_zeros(z_rule_ref.shape), z_think_ref.new_zeros(z_think_ref.shape)
-    items = mem.retrieve(enc_avg, topk=topk)
+    k = mem.topk if (topk is None) else topk
+    items = mem.retrieve(enc_avg, topk=k)
     if not items:
         return z_rule_ref.new_zeros(z_rule_ref.shape), z_think_ref.new_zeros(z_think_ref.shape)
 
@@ -484,24 +517,54 @@ def main():
     lam_rule = args.lam if args.lam_rule is None else args.lam_rule
     lam_think = args.lam if args.lam_think is None else args.lam_think
 
-    data = torch.load(args.ckpt, map_location="cpu")
+    data = torch.load(args.ckpt, map_location="cpu", weights_only=False)
     cfg = data["args"]
-    tok = ByteTokenizer(max_len=cfg["max_len"])
-    model = UZRModel(
-        tok.vocab_size,
-        d_model=cfg["d_model"],
-        z_dim=cfg["z_dim"],
-        max_len=cfg["max_len"],
-        z_think_dim=cfg.get("z_think_dim", 64),
-        z_lang_dim=cfg.get("z_lang_dim", 32),
-        num_langs=cfg.get("num_langs", len(LANG2ID)),
-    )
-    model.load_state_dict(data["model"])
+    rdw = data.get("model", {}).get("readout.weight")
+    rows = rdw.size(0) if isinstance(rdw, torch.Tensor) else None
+    tok = ByteTokenizer(max_len=cfg["max_len"]) if rows == 258 else KoEnTokenizer(max_len=cfg["max_len"])
+    def _build_model(override_dims=None):
+        od = override_dims or {}
+        return UZRModel(
+            tok.vocab_size,
+            d_model=cfg["d_model"],
+            z_dim=cfg["z_dim"],
+            max_len=cfg["max_len"],
+            z_think_dim=cfg.get("z_think_dim", 64),
+            z_lang_dim=cfg.get("z_lang_dim", 32),
+            num_langs=cfg.get("num_langs", len(LANG2ID)),
+            identity_self_dim=cfg.get("identity_self_dim", 2),
+            z_slow_lang_dim=od.get("z_slow_lang_dim", cfg.get("z_slow_lang_dim", 96)),
+            z_slow_logic_dim=od.get("z_slow_logic_dim", cfg.get("z_slow_logic_dim", 96)),
+            z_bridge_dim=od.get("z_bridge_dim", cfg.get("z_bridge_dim", 64)),
+        )
+
+    model = _build_model()
+    try:
+        model.load_state_dict(data["model"])
+    except RuntimeError as e:
+        msg = str(e)
+        if "fuse_proj_3brains.weight" in msg:
+            w = data["model"].get("fuse_proj_3brains.weight")
+            if isinstance(w, torch.Tensor):
+                in_dim = int(w.shape[1])
+                half = in_dim // 2
+                override = {
+                    "z_slow_lang_dim": half,
+                    "z_slow_logic_dim": half,
+                    "z_bridge_dim": in_dim - half,
+                }
+                model = _build_model(override_dims=override)
+                model.load_state_dict(data["model"])
+            else:
+                raise
+        else:
+            raise
     device = torch.device(args.device)
     model.to(device).eval()
 
     use_memory = args.offmem != "on"
     mem = CompressedMemory(max_items=args.max_items, device=device) if use_memory else None
+    tail_q = deque(maxlen=2000) if use_memory else None
     if use_memory:
         seed_identity(mem, model, tok, device, identity=args.identity)
 
@@ -517,11 +580,28 @@ def main():
         "rule_desc",
         "ce_query",
         "conf_context",
+        # Dynamic inner-steps logging
+        "conf0","chosen_steps","tries","best_conf",
+        # Self-eval extended metrics
+        "conf_self_c","ent_c","brier_c","abstain_c",
+        "conf_self_q","ent_q","brier_q","abstain_q",
         "zslow_rule_l1",
         "zslow_think_l1",
         "zlang_norm",
         "mem_items",
+        "gate_pass","compute_tokens",
     ]
+    # Auto-name CSV under logu/<timestamp>_s{inner}_t{turns}_{model}.csv when using default name
+    try:
+        if args.summary_csv == "infer_summary.csv":
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            model_base = Path(args.ckpt).stem if args.ckpt else "model"
+            auto_name = f"{ts}_s{args.inner_steps}_t{args.turns}_{model_base}.csv"
+            out_dir = Path("logu"); out_dir.mkdir(parents=True, exist_ok=True)
+            args.summary_csv = str(out_dir / auto_name)
+    except Exception:
+        pass
+
     fcsv = open(args.summary_csv, "w", newline="", encoding="utf-8")
     w = csv.DictWriter(fcsv, fieldnames=fieldnames)
     w.writeheader()
@@ -533,6 +613,9 @@ def main():
     last_lang_norm = float(torch.norm(model.lang_embed(torch.tensor([last_lang_idx], device=device))).cpu().item())
 
     total_challenges = len(challenges)
+    cfg_meta = load_meta_config()
+    thr = AbstainThresholds(conf_min=cfg_meta["conf_min"], ent_max=cfg_meta["ent_max"])
+
     for t in range(args.turns):
         C, Q, desc = challenges[t % total_challenges]
 
@@ -545,6 +628,7 @@ def main():
         Xq, Yq = enc_batch(Q)
 
         enc_avg = avg_embed(model, Xc)
+        fused_slow = None
 
         lang_key = lang_of(desc)
         lang_idx = resolve_lang_idx(lang_key, model.num_langs)
@@ -553,18 +637,41 @@ def main():
         z_fast_think = z_fast_think_0.clone().detach().requires_grad_(True)
 
         conf_val = 0.0
-        for _ in range(args.inner_steps):
+        # Dynamic inner-step budget from initial confidence
+        conf0_vec = model.confidence(Xc)
+        if conf0_vec is None:
+            with torch.no_grad():
+                logits0 = model(Xc, {"rule": z_slow_rule + z_fast_rule, "think": z_slow_think + z_fast_think, "lang_id": lang_idx})
+                conf0_vec = confidence_from_logits(logits0, Yc)
+        conf0 = float(conf0_vec.mean().item())
+        chosen_steps = inner_steps_from_conf(conf0, s_max=int(args.inner_steps), s_min=0, k=10.0, mid=0.7)
+        tries = 0
+        best_conf = conf0
+        conf_self_c_vec = None
+        ent_c = None
+        brier_c_val = None
+        abstain_c_mask = None
+        for _ in range(chosen_steps):
             z_rule_total = z_slow_rule + z_fast_rule
             z_think_total = z_slow_think + z_fast_think
             logits_c = model(Xc, {"rule": z_rule_total, "think": z_think_total, "lang_id": lang_idx})
             loss_c = seq_ce_loss(logits_c, Yc)
             loss_c = loss_c + lam_rule * torch.mean(torch.abs(z_rule_total)) + lam_think * torch.mean(torch.abs(z_think_total))
             grad_rule, grad_think = torch.autograd.grad(loss_c, (z_fast_rule, z_fast_think), retain_graph=False)
-            conf = confidence_from_logits(logits_c, Yc).mean()
+            # Self-eval confidence (fallback to logits proxy if head missing)
+            conf_self_c_vec = model.confidence(Xc)
+            if conf_self_c_vec is None:
+                conf_self_c_vec = confidence_from_logits(logits_c, Yc)
+            conf = conf_self_c_vec.mean()
             conf_val = float(conf.item())
             step = 0.4 + 0.6 * conf_val
             z_fast_rule = z_fast_rule - step * grad_rule
             z_fast_think = z_fast_think - step * grad_think
+            tries += 1
+            if conf_val > best_conf:
+                best_conf = conf_val
+            if conf_val >= 0.8:
+                break
 
         with torch.no_grad():
             z_fast_rule = soft_threshold(z_fast_rule, lam_rule * 0.5)
@@ -574,6 +681,21 @@ def main():
             z_think_total = z_slow_think + z_fast_think
             logits_q = model(Xq, {"rule": z_rule_total, "think": z_think_total, "lang_id": lang_idx})
             ce_q = seq_ce_loss(logits_q, Yq).item()
+            # Compute self-eval/query metrics
+            if conf_self_c_vec is None:
+                conf_self_c_vec = model.confidence(Xc)
+                if conf_self_c_vec is None:
+                    conf_self_c_vec = confidence_from_logits(logits_c, Yc)
+            ent_c = model.sequence_entropy(logits_c)
+            brier_c_val = model.brier_from_logits_conf(logits_c, Yc, conf_self_c_vec)
+            abstain_c_mask = maybe_abstain(conf_self_c_vec, ent_c, thr)
+
+            conf_self_q_vec = model.confidence(Xq)
+            if conf_self_q_vec is None:
+                conf_self_q_vec = confidence_from_logits(logits_q, Yq)
+            ent_q = model.sequence_entropy(logits_q)
+            brier_q_val = model.brier_from_logits_conf(logits_q, Yq, conf_self_q_vec)
+            abstain_q_mask = maybe_abstain(conf_self_q_vec, ent_q, thr)
 
             z_slow_rule = z_slow_rule + args.alpha * (z_fast_rule - z_slow_rule)
             z_slow_think = z_slow_think + args.alpha * (z_fast_think - z_slow_think)
@@ -582,11 +704,24 @@ def main():
 
             if use_memory:
                 fused_slow = model._fuse_z(z_slow_rule, z_slow_think, lang_idx)[0].detach()
-                key, val = make_sketch(enc_avg, fused_slow, meta={"desc": desc, "lang": lang_key})
+                meta = {
+                    "desc": desc, "lang": lang_key, "ce_q": float(ce_q), "conf": float(conf_val),
+                    "conf0": conf0, "chosen_steps": int(chosen_steps), "tries": int(tries), "best_conf": float(best_conf),
+                    "conf_self_c": float(conf_self_c_vec.mean().item()),
+                    "ent_c": float(ent_c.mean().item()),
+                    "brier_c": float(brier_c_val.item()),
+                    "conf_self_q": float(conf_self_q_vec.mean().item()),
+                    "ent_q": float(ent_q.mean().item()),
+                    "brier_q": float(brier_q_val.item()),
+                }
+                key, val = make_sketch(enc_avg, fused_slow, meta=meta)
                 val["z_rule"] = z_slow_rule.detach().clone()
                 val["z_think"] = z_slow_think.detach().clone()
                 val["lang_id"] = int(lang_idx)
-                mem.add(key, val, step=t)
+                if hasattr(mem, "add_with_policy"):
+                    mem.add_with_policy(key, val, step=t, meta=meta)
+                else:
+                    mem.add(key, val, step=t)
 
             z_rule_l1 = float(torch.sum(torch.abs(z_slow_rule)).cpu().item())
             z_think_l1 = float(torch.sum(torch.abs(z_slow_think)).cpu().item())
@@ -595,11 +730,37 @@ def main():
         ce_hist.append(ce_q)
         if len(ce_hist) > 200:
             ce_hist.pop(0)
+        # Tail-bucket collection: add top-10% CE samples into tail queue
+        if use_memory and fused_slow is not None and tail_q is not None:
+            window = ce_hist[-200:]
+            if window:
+                srt = sorted(window)
+                k = max(0, min(len(srt) - 1, int(round(0.9 * (len(srt) - 1)))))
+                p90 = srt[k]
+                if ce_q >= p90:
+                    try:
+                        tail_q.append({
+                            "enc_avg": enc_avg.detach().cpu(),
+                            "z": fused_slow.detach().cpu(),
+                            "desc": desc,
+                            "lang": lg,
+                            "ce": float(ce_q),
+                            "conf": float(conf_val),
+                        })
+                    except Exception:
+                        pass
 
         lg = lang_key
         per_lang.setdefault(lg, []).append(ce_q)
 
         mem_item_count = len(mem.items) if use_memory else 0
+
+        # Approx compute tokens consumed by inner loops (context forward per try)
+        try:
+            Bc, Tc = Xc.shape
+            compute_tokens = int(tries * Bc * Tc)
+        except Exception:
+            compute_tokens = tries
 
         row = {
             "turn": t + 1,
@@ -608,10 +769,24 @@ def main():
             "rule_desc": desc,
             "ce_query": round(ce_q, 4),
             "conf_context": round(conf_val, 4),
+            "conf0": round(conf0, 4),
+            "chosen_steps": int(chosen_steps),
+            "tries": int(tries),
+            "best_conf": round(float(best_conf), 4),
+            "conf_self_c": round(float(conf_self_c_vec.mean().item()), 4) if conf_self_c_vec is not None else None,
+            "ent_c": round(float(ent_c.mean().item()), 4) if ent_c is not None else None,
+            "brier_c": round(float(brier_c_val.item()), 4) if brier_c_val is not None else None,
+            "abstain_c": int(abstain_c_mask.float().mean().item() > 0) if abstain_c_mask is not None else 0,
+            "conf_self_q": round(float(conf_self_q_vec.mean().item()), 4),
+            "ent_q": round(float(ent_q.mean().item()), 4),
+            "brier_q": round(float(brier_q_val.item()), 4),
+            "abstain_q": int(abstain_q_mask.float().mean().item() > 0),
             "zslow_rule_l1": round(z_rule_l1, 4),
             "zslow_think_l1": round(z_think_l1, 4),
             "zlang_norm": round(lang_norm, 4),
             "mem_items": mem_item_count,
+            "gate_pass": int((abstain_c_mask.float().mean().item() <= 0.5) and (abstain_q_mask.float().mean().item() <= 0.5)),
+            "compute_tokens": int(compute_tokens),
         }
         w.writerow(row)
 
@@ -619,6 +794,16 @@ def main():
         last_lang_norm = lang_norm
 
         if (t + 1) % args.summary_every == 0:
+            # Promote a few tail-bucket samples periodically
+            if use_memory and tail_q and len(tail_q) > 0:
+                k = min(5, len(tail_q))
+                for s in random.sample(list(tail_q), k=k):
+                    meta_tail = {"desc": s["desc"], "lang": s["lang"], "ce_q": s["ce"], "conf": s["conf"], "bucket": "tail"}
+                    key_t, val_t = make_sketch(s["enc_avg"], s["z"], meta=meta_tail)
+                    if hasattr(mem, "add_with_policy"):
+                        mem.add_with_policy(key_t, val_t, step=t, meta=meta_tail)
+                    else:
+                        mem.add(key_t, val_t, step=t)
             med = statistics.median(ce_hist) if ce_hist else float("nan")
             mean = sum(ce_hist) / len(ce_hist)
             print(f"[turn {t + 1}] CE(mean/med over last {len(ce_hist)}): {mean:.3f}/{med:.3f} | z_rule_L1={z_rule_l1:.1f} | z_think_L1={z_think_l1:.1f} | mem={mem_item_count} | rule='{desc}'")

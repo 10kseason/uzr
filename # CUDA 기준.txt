@@ -1,7 +1,7 @@
 # CUDA 기준
 
 학습 :
-python -m uzr.train_meta --steps 20000 --device cuda --z_dim 128 --z_think_dim 64 --z_lang_dim 32 --inner_steps 5 --inner_eta 0.5 --lam_rule 1e-3 --lam_think 1e-3 --single_z --identity "루리아"
+python -m uzr.train_meta_3brains --device cuda --steps 15000 --z_slow_lang_dim 96 --z_slow_logic_dim 96 --z_bridge_dim 64 --lam_lang 5e-4 --lam_logic 5e-4 --lam_bridge 3e-4 --inner_steps 6 --inner_eta 0.425 --identity "루리아" --save uzr_3brains_ckpt.pt --self_eval on --abstain --amp --save_every 200
 
 
 비선형 학습:
@@ -59,6 +59,7 @@ python -m uzr.train_meta_patched --steps 3000 --device cuda --identity "루리�
 
 
 python -m uzr.train_meta_patched_v2 --steps 4500 --device cuda --identity "루리아" --warmup_steps 600 -inner_steps 8 --inner_eta 0.42 --id_weight 0.15 --lam_sem 6e-4 --lam_transfer 4e-4 --aux_baux 3 --cosine --amp
+
 
 
 

@@ -1,10 +1,5 @@
 # UZR — Universal Z‑Rule Runner
 
-
-모델 링크 >>>>>> https://huggingface.co/naksyu/uzr_3brains
-
-
-
 **UZR**는 메타학습(Meta-learning)을 기반으로 한 언어 규칙 추론 시스템입니다. 단일 네트워크 `f_θ(x, z)`가 **작은 latent 벡터 `z`만 적응**시켜 few-shot 예시로부터 언어 규칙을 학습하고 적용합니다.
 
 ## 핵심 개념
@@ -39,14 +34,19 @@ z* = arg min_z Σ_{(x,y)∈C} ℓ(f_θ(x,z), y) + λ ℛ(z)
 - `meta_core.py` — Self-evaluation head, abstain policy, confidence/entropy estimation
 
 **학습 스크립트:**
-- `train_meta.py` — Meta-learning loop: z-only inner updates (현재 사용되지 않습니다.)
+- `train_meta.py` — Meta-learning loop: z-only inner updates
 - `train_meta_3brains.py` — 3-brain architecture (language, logic, bridge) 학습
-- `train_meta_patched_v2.py` — 향상된 버전( 현재 쓰이지 않습니다.) train_meta_3brains.py를 사용해주세요.
+- `train_meta_patched_v2.py` — 향상된 버전 (confidence gating, memory policy)
 
 **추론 스크립트:**
 - `infer_longrun.py` — Long-turn (10k+ turns) 추론 데모
 - `infer_longrun_standalone.py` — 독립 실행 버전
 - `cli_luria.py` — 대화형 CLI (Luria)
+
+**문서:**
+- `AGENTS.md` — 에이전트/개발 가이드라인
+- `DOCS_LURIA.md` — Luria manual 구현 노트
+- `CHANGELOG.md` — 상세 변경 이력
 
 ### 메인 폴더 (실험 스크립트)
 
@@ -95,7 +95,7 @@ python -m uzr.train_meta --steps 500 --device cpu
 
 **2. 3-brain 학습:**
 ```bash
-python -m uzr.train_meta_3brains --device cuda --steps 15000 --z_slow_lang_dim 96 --z_slow_logic_dim 96 --z_bridge_dim 64 --lam_lang 5e-4 --lam_logic 5e-4 --lam_bridge 3e-4 --inner_steps 6 --inner_eta 0.425 --identity "루리아" --save uzr_3brains_ckpt.pt --self_eval on --abstain --amp --save_every 200
+python -m uzr.train_meta_3brains --steps 1000 --device cuda
 ```
 
 **3. 장기 추론 데모:**

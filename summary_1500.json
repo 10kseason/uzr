@@ -1,0 +1,42 @@
+{
+  "overall": {
+    "count": 1500,
+    "mean": 4.260658759266138,
+    "median": 3.7855842113494873
+  },
+  "by_lang": {
+    "ko": {
+      "count": 375,
+      "mean": 6.594404761632283,
+      "median": 7.671600818634033
+    },
+    "en": {
+      "count": 450,
+      "mean": 2.7722526099615625,
+      "median": 3.057186007499695
+    },
+    "ja": {
+      "count": 225,
+      "mean": 5.45763640721639,
+      "median": 6.268418312072754
+    },
+    "base": {
+      "count": 450,
+      "mean": 3.2057877492904665,
+      "median": 3.2285284996032715
+    },
+    "mix": {
+      "count": 0,
+      "mean": null,
+      "median": null
+    }
+  },
+  "turns": 1500,
+  "identity_seeded": "루리아",
+  "offmem_mode": "off",
+  "csv_path": "summary_1500.csv",
+  "final_z_rule_l1": 13.39452075958252,
+  "final_z_think_l1": 11.102025985717773,
+  "final_lang_id": 1,
+  "final_lang_embed_norm": 3.1958658695220947
+}

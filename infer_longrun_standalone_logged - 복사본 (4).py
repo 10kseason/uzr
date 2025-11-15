@@ -499,49 +499,22 @@ def main():
 
     data = torch.load(args.ckpt, map_location="cpu", weights_only=False)
     cfg = data["args"]
-    # Detect tokenizer type like other scripts do (ByteTokenizer if readout matches 258)
-    rdw = data.get("model", {}).get("readout.weight")
-    rows = rdw.size(0) if isinstance(rdw, torch.Tensor) else None
-    tok = ByteTokenizer(max_len=cfg["max_len"]) if rows == 258 else KoEnTokenizer(max_len=cfg["max_len"])
-
-    def _build_model(override_dims=None):
-        od = override_dims or {}
-        return UZRModel(
-            tok.vocab_size,
-            d_model=cfg["d_model"],
-            z_dim=cfg["z_dim"],
-            max_len=cfg["max_len"],
-            z_think_dim=cfg.get("z_think_dim", 64),
-            z_lang_dim=cfg.get("z_lang_dim", 32),
-            num_langs=cfg.get("num_langs", len(LANG2ID)),
-            identity_self_dim=cfg.get("identity_self_dim", 2),
-            z_slow_lang_dim=od.get("z_slow_lang_dim", cfg.get("z_slow_lang_dim", 96)),
-            z_slow_logic_dim=od.get("z_slow_logic_dim", cfg.get("z_slow_logic_dim", 96)),
-            z_bridge_dim=od.get("z_bridge_dim", cfg.get("z_bridge_dim", 64)),
-        )
-
-    model = _build_model()
-    try:
-        # strict load first; if size mismatch occurs, fall back using inferred dims
-        model.load_state_dict(data["model"])
-    except RuntimeError as e:
-        msg = str(e)
-        if "fuse_proj_3brains.weight" in msg:
-            w = data["model"].get("fuse_proj_3brains.weight")
-            if isinstance(w, torch.Tensor):
-                in_dim = int(w.shape[1])
-                half = in_dim // 2
-                override = {
-                    "z_slow_lang_dim": half,
-                    "z_slow_logic_dim": half,
-                    "z_bridge_dim": in_dim - half,
-                }
-                model = _build_model(override_dims=override)
-                model.load_state_dict(data["model"])
-            else:
-                raise
-        else:
-            raise
+    tok = KoEnTokenizer(max_len=cfg["max_len"])
+    model = UZRModel(
+        tok.vocab_size,
+        d_model=cfg["d_model"],
+        z_dim=cfg["z_dim"],
+        max_len=cfg["max_len"],
+        z_think_dim=cfg.get("z_think_dim", 64),
+        z_lang_dim=cfg.get("z_lang_dim", 32),
+        num_langs=cfg.get("num_langs", len(LANG2ID)),
+    )
+    # Load with strict=False to handle potential architecture mismatches
+    missing_keys, unexpected_keys = model.load_state_dict(data["model"], strict=False)
+    if missing_keys:
+        print(f"[WARNING] Missing keys in checkpoint: {missing_keys}")
+    if unexpected_keys:
+        print(f"[WARNING] Unexpected keys in checkpoint: {unexpected_keys}")
     device = torch.device(args.device)
     model.to(device).eval()
 

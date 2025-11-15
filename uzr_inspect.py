@@ -40,9 +40,10 @@ import torch.nn.functional as F
 def _import_uzr():
     mod = {}
     try:
-        from uzr.model import UZRModel, ByteTokenizer, soft_threshold
+        from uzr.model import UZRModel, ByteTokenizer, KoEnTokenizer, soft_threshold
         mod["UZRModel"] = UZRModel
         mod["ByteTokenizer"] = ByteTokenizer
+        mod["KoEnTokenizer"] = KoEnTokenizer
         mod["soft_threshold"] = soft_threshold
         # Optional helpers if present
         try:
@@ -57,9 +58,10 @@ def _import_uzr():
         base = os.path.dirname(os.path.abspath(__file__))
         if base not in sys.path:
             sys.path.append(base)
-        from model import UZRModel, ByteTokenizer, soft_threshold  # type: ignore
+        from model import UZRModel, ByteTokenizer, KoEnTokenizer, soft_threshold  # type: ignore
         mod["UZRModel"] = UZRModel
         mod["ByteTokenizer"] = ByteTokenizer
+        mod["KoEnTokenizer"] = KoEnTokenizer
         mod["soft_threshold"] = soft_threshold
         try:
             from infer_longrun import avg_embed, init_from_retrieval  # noqa: F401
@@ -72,6 +74,7 @@ def _import_uzr():
 uzr = _import_uzr()
 UZRModel = uzr["UZRModel"]
 ByteTokenizer = uzr["ByteTokenizer"]
+KoEnTokenizer = uzr["KoEnTokenizer"]
 soft_threshold = uzr.get("soft_threshold")
 
 def human_bytes(n: int) -> str:
@@ -137,7 +140,17 @@ def build_model_from_ckpt(ckpt_path: str, device: str = "cpu") -> Tuple[torch.nn
     z_dim = cfg.get("z_dim", 128)
     max_len = cfg.get("max_len", 128)
 
-    tok = ByteTokenizer(max_len=max_len)
+    # Auto-detect tokenizer from vocab size
+    try:
+        vocab_size_from_ckpt = state.get("encoder.tok.weight", state.get("tok.weight")).shape[0]
+    except:
+        vocab_size_from_ckpt = None
+
+    if vocab_size_from_ckpt == 258:
+        tok = ByteTokenizer(max_len=max_len)
+    else:
+        tok = KoEnTokenizer(max_len=max_len)
+
     model = UZRModel(tok.vocab_size, d_model=d_model, z_dim=z_dim, max_len=max_len)
     model.load_state_dict(state, strict=False)
     device = torch.device(device)

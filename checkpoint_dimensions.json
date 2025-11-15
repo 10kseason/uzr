@@ -1,0 +1,853 @@
+{
+  "checkpoint_path": "D:\\잠재공간 실험실\\실험실 시즌2\\uzr_ckpt_best.pt",
+  "top_level_keys": [
+    "model",
+    "args",
+    "opt",
+    "step",
+    "best_loss",
+    "memory"
+  ],
+  "sections": {
+    "model": {
+      "type": "state_dict",
+      "num_parameters": 59,
+      "total_numel": 9315786,
+      "tensors": [
+        {
+          "name": "identity_self",
+          "shape": [
+            2
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 2,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "z0",
+          "shape": [
+            128
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 128,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.tok.weight",
+          "shape": [
+            11624,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 2975744,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.pos.weight",
+          "shape": [
+            128,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 32768,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.0.self_attn.in_proj_weight",
+          "shape": [
+            768,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 196608,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.0.self_attn.in_proj_bias",
+          "shape": [
+            768
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 768,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.0.self_attn.out_proj.weight",
+          "shape": [
+            256,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 65536,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.0.self_attn.out_proj.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.0.linear1.weight",
+          "shape": [
+            1024,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 262144,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.0.linear1.bias",
+          "shape": [
+            1024
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 1024,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.0.linear2.weight",
+          "shape": [
+            256,
+            1024
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 262144,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.0.linear2.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.0.norm1.weight",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.0.norm1.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.0.norm2.weight",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.0.norm2.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.1.self_attn.in_proj_weight",
+          "shape": [
+            768,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 196608,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.1.self_attn.in_proj_bias",
+          "shape": [
+            768
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 768,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.1.self_attn.out_proj.weight",
+          "shape": [
+            256,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 65536,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.1.self_attn.out_proj.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.1.linear1.weight",
+          "shape": [
+            1024,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 262144,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.1.linear1.bias",
+          "shape": [
+            1024
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 1024,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.1.linear2.weight",
+          "shape": [
+            256,
+            1024
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 262144,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.1.linear2.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.1.norm1.weight",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.1.norm1.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.1.norm2.weight",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.1.norm2.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.2.self_attn.in_proj_weight",
+          "shape": [
+            768,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 196608,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.2.self_attn.in_proj_bias",
+          "shape": [
+            768
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 768,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.2.self_attn.out_proj.weight",
+          "shape": [
+            256,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 65536,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.2.self_attn.out_proj.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.2.linear1.weight",
+          "shape": [
+            1024,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 262144,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.2.linear1.bias",
+          "shape": [
+            1024
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 1024,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.2.linear2.weight",
+          "shape": [
+            256,
+            1024
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 262144,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.2.linear2.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.2.norm1.weight",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.2.norm1.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.2.norm2.weight",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.2.norm2.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.3.self_attn.in_proj_weight",
+          "shape": [
+            768,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 196608,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.3.self_attn.in_proj_bias",
+          "shape": [
+            768
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 768,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.3.self_attn.out_proj.weight",
+          "shape": [
+            256,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 65536,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.3.self_attn.out_proj.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.3.linear1.weight",
+          "shape": [
+            1024,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 262144,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.3.linear1.bias",
+          "shape": [
+            1024
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 1024,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.3.linear2.weight",
+          "shape": [
+            256,
+            1024
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 262144,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "encoder.enc.layers.3.linear2.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.3.norm1.weight",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.3.norm1.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.3.norm2.weight",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "encoder.enc.layers.3.norm2.bias",
+          "shape": [
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 256,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "film.fc.weight",
+          "shape": [
+            512,
+            128
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 65536,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "film.fc.bias",
+          "shape": [
+            512
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 512,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "readout.weight",
+          "shape": [
+            11624,
+            256
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 2975744,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "readout.bias",
+          "shape": [
+            11624
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 11624,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        },
+        {
+          "name": "lang_embed.weight",
+          "shape": [
+            3,
+            32
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 96,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "fuse_proj.weight",
+          "shape": [
+            128,
+            738
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 94464,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 2
+        },
+        {
+          "name": "fuse_proj.bias",
+          "shape": [
+            128
+          ],
+          "dtype": "torch.float32",
+          "device": "cpu",
+          "numel": 128,
+          "requires_grad": false,
+          "is_sparse": false,
+          "ndim": 1
+        }
+      ]
+    },
+    "args": {
+      "type": "dict",
+      "keys": [
+        "device",
+        "steps",
+        "lr",
+        "d_model",
+        "z_dim",
+        "z_think_dim",
+        "z_lang_dim",
+        "identity_self_dim",
+        "num_langs",
+        "max_len",
+        "inner_steps",
+        "inner_eta",
+        "save",
+        "save_every",
+        "resume",
+        "seed",
+        "amp",
+        "warmup_steps",
+        "cosine",
+        "single_z",
+        "identity",
+        "id_weight",
+        "lam",
+        "lam_rule",
+        "lam_think",
+        "lam_sem",
+        "lam_transfer",
+        "aux_baux",
+        "sem_dim"
+      ],
+      "content": {
+        "device": "cuda",
+        "steps": "10000",
+        "lr": "0.002",
+        "d_model": "256",
+        "z_dim": "128",
+        "z_think_dim": "64",
+        "z_lang_dim": "32",
+        "identity_self_dim": "2",
+        "num_langs": "3",
+        "max_len": "128",
+        "inner_steps": "6",
+        "inner_eta": "0.425",
+        "save": "uzr_ckpt.pt",
+        "save_every": "100",
+        "resume": "",
+        "seed": "2026",
+        "amp": "True",
+        "warmup_steps": "1500",
+        "cosine": "True",
+        "single_z": "False",
+        "identity": "루리아",
+        "id_weight": "0.2",
+        "lam": "1e-08",
+        "lam_rule": "0.0008",
+        "lam_think": "0.0002",
+        "lam_sem": "0.0005",
+        "lam_transfer": "0.0007",
+        "aux_baux": "4",
+        "sem_dim": "12"
+      }
+    },
+    "opt": {
+      "type": "dict",
+      "keys": [
+        "state",
+        "param_groups"
+      ],
+      "content": {
+        "state": "dict",
+        "param_groups": "list"
+      }
+    },
+    "step": {
+      "type": "int",
+      "value": "9100"
+    },
+    "best_loss": {
+      "type": "float",
+      "value": "1.2504631962585657"
+    },
+    "memory": {
+      "type": "dict",
+      "keys": [
+        "items",
+        "config",
+        "learner_state",
+        "optimizer_state",
+        "ema_loss",
+        "learn_fields"
+      ],
+      "content": {
+        "items": "list",
+        "config": "dict",
+        "learner_state": "OrderedDict",
+        "optimizer_state": "dict",
+        "ema_loss": "0.008379337353761517",
+        "learn_fields": "('avg_emb', 'z_slow')"
+      }
+    }
+  }
+}

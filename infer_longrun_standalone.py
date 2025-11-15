@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import argparse, csv, statistics, json, sys, pathlib
+from collections import deque
+import random
 from typing import Tuple, List, Callable, Optional
 
 import torch
@@ -11,7 +13,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.append(str(HERE))
 sys.path.append(str(HERE / 'uzr'))
 
-from uzr.model import UZRModel, ByteTokenizer, seq_ce_loss, soft_threshold, confidence_from_logits
+from uzr.model import UZRModel, ByteTokenizer, KoEnTokenizer, seq_ce_loss, soft_threshold, confidence_from_logits
 from uzr.memory import CompressedMemory, make_sketch
 import uzr.tasks as tasklib
 
@@ -409,10 +411,11 @@ def build_challenge_suite() -> List[Tuple[List[Tuple[str, str]], List[Tuple[str,
 
 
 def init_from_retrieval_multi(mem: Optional[CompressedMemory], enc_avg: torch.Tensor, z_rule_ref: torch.Tensor,
-                               z_think_ref: torch.Tensor, lang_id: int, topk: int = 4) -> Tuple[torch.Tensor, torch.Tensor]:
+                               z_think_ref: torch.Tensor, lang_id: int, topk: Optional[int] = None) -> Tuple[torch.Tensor, torch.Tensor]:
     if mem is None:
         return z_rule_ref.new_zeros(z_rule_ref.shape), z_think_ref.new_zeros(z_think_ref.shape)
-    items = mem.retrieve(enc_avg, topk=topk)
+    k = mem.topk if (topk is None) else topk
+    items = mem.retrieve(enc_avg, topk=k)
     if not items:
         return z_rule_ref.new_zeros(z_rule_ref.shape), z_think_ref.new_zeros(z_think_ref.shape)
 
@@ -484,24 +487,54 @@ def main():
     lam_rule = args.lam if args.lam_rule is None else args.lam_rule
     lam_think = args.lam if args.lam_think is None else args.lam_think
 
-    data = torch.load(args.ckpt, map_location="cpu")
+    data = torch.load(args.ckpt, map_location="cpu", weights_only=False)
     cfg = data["args"]
-    tok = ByteTokenizer(max_len=cfg["max_len"])
-    model = UZRModel(
-        tok.vocab_size,
-        d_model=cfg["d_model"],
-        z_dim=cfg["z_dim"],
-        max_len=cfg["max_len"],
-        z_think_dim=cfg.get("z_think_dim", 64),
-        z_lang_dim=cfg.get("z_lang_dim", 32),
-        num_langs=cfg.get("num_langs", len(LANG2ID)),
-    )
-    model.load_state_dict(data["model"])
+    rdw = data.get("model", {}).get("readout.weight")
+    rows = rdw.size(0) if isinstance(rdw, torch.Tensor) else None
+    tok = ByteTokenizer(max_len=cfg["max_len"]) if rows == 258 else KoEnTokenizer(max_len=cfg["max_len"])
+    def _build_model(override_dims=None):
+        od = override_dims or {}
+        return UZRModel(
+            tok.vocab_size,
+            d_model=cfg["d_model"],
+            z_dim=cfg["z_dim"],
+            max_len=cfg["max_len"],
+            z_think_dim=cfg.get("z_think_dim", 64),
+            z_lang_dim=cfg.get("z_lang_dim", 32),
+            num_langs=cfg.get("num_langs", len(LANG2ID)),
+            identity_self_dim=cfg.get("identity_self_dim", 2),
+            z_slow_lang_dim=od.get("z_slow_lang_dim", cfg.get("z_slow_lang_dim", 96)),
+            z_slow_logic_dim=od.get("z_slow_logic_dim", cfg.get("z_slow_logic_dim", 96)),
+            z_bridge_dim=od.get("z_bridge_dim", cfg.get("z_bridge_dim", 64)),
+        )
+
+    model = _build_model()
+    try:
+        model.load_state_dict(data["model"])
+    except RuntimeError as e:
+        msg = str(e)
+        if "fuse_proj_3brains.weight" in msg:
+            w = data["model"].get("fuse_proj_3brains.weight")
+            if isinstance(w, torch.Tensor):
+                in_dim = int(w.shape[1])
+                half = in_dim // 2
+                override = {
+                    "z_slow_lang_dim": half,
+                    "z_slow_logic_dim": half,
+                    "z_bridge_dim": in_dim - half,
+                }
+                model = _build_model(override_dims=override)
+                model.load_state_dict(data["model"])
+            else:
+                raise
+        else:
+            raise
     device = torch.device(args.device)
     model.to(device).eval()
 
     use_memory = args.offmem != "on"
     mem = CompressedMemory(max_items=args.max_items, device=device) if use_memory else None
+    tail_q = deque(maxlen=2000) if use_memory else None
     if use_memory:
         seed_identity(mem, model, tok, device, identity=args.identity)
 
@@ -545,6 +578,7 @@ def main():
         Xq, Yq = enc_batch(Q)
 
         enc_avg = avg_embed(model, Xc)
+        fused_slow = None
 
         lang_key = lang_of(desc)
         lang_idx = resolve_lang_idx(lang_key, model.num_langs)
@@ -582,11 +616,15 @@ def main():
 
             if use_memory:
                 fused_slow = model._fuse_z(z_slow_rule, z_slow_think, lang_idx)[0].detach()
-                key, val = make_sketch(enc_avg, fused_slow, meta={"desc": desc, "lang": lang_key})
+                meta = {"desc": desc, "lang": lang_key, "ce_q": float(ce_q), "conf": float(conf_val)}
+                key, val = make_sketch(enc_avg, fused_slow, meta=meta)
                 val["z_rule"] = z_slow_rule.detach().clone()
                 val["z_think"] = z_slow_think.detach().clone()
                 val["lang_id"] = int(lang_idx)
-                mem.add(key, val, step=t)
+                if hasattr(mem, "add_with_policy"):
+                    mem.add_with_policy(key, val, step=t, meta=meta)
+                else:
+                    mem.add(key, val, step=t)
 
             z_rule_l1 = float(torch.sum(torch.abs(z_slow_rule)).cpu().item())
             z_think_l1 = float(torch.sum(torch.abs(z_slow_think)).cpu().item())
@@ -595,6 +633,25 @@ def main():
         ce_hist.append(ce_q)
         if len(ce_hist) > 200:
             ce_hist.pop(0)
+        # Tail-bucket collection: add top-10% CE samples into tail queue
+        if use_memory and fused_slow is not None and tail_q is not None:
+            window = ce_hist[-200:]
+            if window:
+                srt = sorted(window)
+                k = max(0, min(len(srt) - 1, int(round(0.9 * (len(srt) - 1)))))
+                p90 = srt[k]
+                if ce_q >= p90:
+                    try:
+                        tail_q.append({
+                            "enc_avg": enc_avg.detach().cpu(),
+                            "z": fused_slow.detach().cpu(),
+                            "desc": desc,
+                            "lang": lg,
+                            "ce": float(ce_q),
+                            "conf": float(conf_val),
+                        })
+                    except Exception:
+                        pass
 
         lg = lang_key
         per_lang.setdefault(lg, []).append(ce_q)
@@ -619,6 +676,16 @@ def main():
         last_lang_norm = lang_norm
 
         if (t + 1) % args.summary_every == 0:
+            # Promote a few tail-bucket samples periodically
+            if use_memory and tail_q and len(tail_q) > 0:
+                k = min(5, len(tail_q))
+                for s in random.sample(list(tail_q), k=k):
+                    meta_tail = {"desc": s["desc"], "lang": s["lang"], "ce_q": s["ce"], "conf": s["conf"], "bucket": "tail"}
+                    key_t, val_t = make_sketch(s["enc_avg"], s["z"], meta=meta_tail)
+                    if hasattr(mem, "add_with_policy"):
+                        mem.add_with_policy(key_t, val_t, step=t, meta=meta_tail)
+                    else:
+                        mem.add(key_t, val_t, step=t)
             med = statistics.median(ce_hist) if ce_hist else float("nan")
             mean = sum(ce_hist) / len(ce_hist)
             print(f"[turn {t + 1}] CE(mean/med over last {len(ce_hist)}): {mean:.3f}/{med:.3f} | z_rule_L1={z_rule_l1:.1f} | z_think_L1={z_think_l1:.1f} | mem={mem_item_count} | rule='{desc}'")

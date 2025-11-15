@@ -11,7 +11,7 @@ import torch.nn.functional as F
 sys.path.append(str(pathlib.Path(__file__).resolve().parent))
 sys.path.append(str(pathlib.Path(__file__).resolve().parent / "uzr"))
 
-from uzr.model import UZRModel, ByteTokenizer, soft_threshold, seq_ce_loss, confidence_from_logits
+from uzr.model import UZRModel, ByteTokenizer, KoEnTokenizer, soft_threshold, seq_ce_loss, confidence_from_logits
 from uzr.memory import CompressedMemory, make_sketch
 from uzr.infer_longrun import avg_embed, init_from_retrieval, seed_identity
 
@@ -91,7 +91,7 @@ class LowRankAdapter(nn.Module):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--device", default="cpu")
-    ap.add_argument("--ckpt", default="uzr_ckpt.pt")
+    ap.add_argument("--ckpt", default="uzr_ckpt_best.pt")
     ap.add_argument("--identity", default="루리아")
     # inner adaptation (z)
     ap.add_argument("--inner_steps", type=int, default=5)
@@ -118,9 +118,18 @@ def main():
     args = ap.parse_args()
 
     device = torch.device(args.device)
-    data = torch.load(args.ckpt, map_location="cpu")
+    data = torch.load(args.ckpt, map_location="cpu", weights_only=False)
     cfg = data["args"]
-    tok = ByteTokenizer(max_len=cfg["max_len"])
+
+    # Auto-detect tokenizer from checkpoint vocab size
+    try:
+        vocab_size = data["model"]["readout.weight"].size(0)
+        tok = ByteTokenizer(max_len=cfg["max_len"]) if vocab_size == 258 else KoEnTokenizer(max_len=cfg["max_len"])
+        print(f"Using {'ByteTokenizer' if vocab_size == 258 else 'KoEnTokenizer'} (vocab_size={vocab_size})")
+    except:
+        tok = KoEnTokenizer(max_len=cfg["max_len"])
+        print(f"Using KoEnTokenizer (default)")
+
     model = UZRModel(tok.vocab_size, d_model=cfg["d_model"], z_dim=cfg["z_dim"], max_len=cfg["max_len"])
     model.load_state_dict(data["model"])
     model.to(device).eval()

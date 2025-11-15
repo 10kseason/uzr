@@ -19,7 +19,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.append(str(HERE))
 sys.path.append(str(HERE / 'uzr'))
 
-from uzr.model import UZRModel, ByteTokenizer, seq_ce_loss, soft_threshold, confidence_from_logits
+from uzr.model import UZRModel, ByteTokenizer, KoEnTokenizer, seq_ce_loss, soft_threshold, confidence_from_logits
 from uzr.memory import CompressedMemory, make_sketch
 import uzr.tasks as UZRT
 
@@ -154,9 +154,13 @@ def main():
     lam_rule = args.lam if args.lam_rule is None else args.lam_rule
     lam_think = args.lam if args.lam_think is None else args.lam_think
 
-    data = torch.load(args.ckpt, map_location="cpu")
+    data = torch.load(args.ckpt, map_location="cpu", weights_only=False)
     cfg = data["args"]
-    tok = ByteTokenizer(max_len=cfg["max_len"])
+
+    # Auto-detect tokenizer from vocab size
+    vocab_size = data["model"]["encoder.tok.weight"].shape[0]
+    tok = ByteTokenizer(max_len=cfg["max_len"]) if vocab_size == 258 else KoEnTokenizer(max_len=cfg["max_len"])
+
     model = UZRModel(
         tok.vocab_size,
         d_model=cfg["d_model"],

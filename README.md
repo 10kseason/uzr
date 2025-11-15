@@ -5,6 +5,9 @@
 > Issues/PRs are welcome, but response is not guaranteed.  
 > I may or may not continue this line; feel free to fork and go wild.
 
+
+
+>> 가장 최신 트레인 모델 = https://huggingface.co/naksyu/UZR-Lastest
 이 저장소는 **개인 연구용 프로토타입**으로, 안정성·지속적인 유지보수·성능을 어떤 형태로도 보장하지 않습니다.  
 실험 코드와 아이디어를 공유하는 목적이며, 필요하다면 자유롭게 fork 해서 마음껏 변형해도 됩니다.
 

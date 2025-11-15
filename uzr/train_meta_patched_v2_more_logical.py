@@ -238,7 +238,7 @@ def main():
 
     # Create memory first with learning enabled
     mem = CompressedMemory(
-        max_items=8192,
+        max_items=32000,
         device=device,
         enable_learning=True,
         learn_hidden=512,

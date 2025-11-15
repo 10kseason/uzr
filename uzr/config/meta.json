@@ -1,0 +1,9 @@
+{
+  "lambda_brier": 0.2,
+  "conf_min": 0.65,
+  "brier_max": 0.08,
+  "ent_max": 2.2,
+  "reflect_interval": 1,
+  "replay_ratio": 0.25,
+  "fail_decay": 0.95
+}

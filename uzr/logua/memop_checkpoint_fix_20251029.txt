@@ -1,0 +1,29 @@
+체크포인트 저장 수정 기록 — 2025-10-29
+
+수정 파일
+- train_meta_3brains.py
+
+수정 내용
+1. 주기적 체크포인트 저장 (line 1793)
+   - payload에 "memop_logits": memop_logits.data 추가
+   - 기존: rejector_w, rejector_b, tau_r, near_merge_thr_param, top_k_param
+   - 추가: memop_logits
+
+2. 최종 체크포인트 저장 (line 1810)
+   - 최종 저장 딕셔너리에 "memop_logits": memop_logits.data 추가
+   - 동일하게 다른 learnable 파라미터들과 함께 저장
+
+목적
+- 650턴부터 활성화되는 Autonomous Memory Operations의 학습된 정책(memop_logits)을
+  체크포인트에 저장하여 학습 재개 시 정책이 유지되도록 함
+- 4가지 메모리 연산(synthesis, split, interpolate, crossover)의 선택 확률 분포를 보존
+
+관련 기능
+- memop_logits: [4] 크기 파라미터 (4가지 연산의 로짓)
+- 목표: 정답률 0.85 달성
+- 손실 함수: 정확도 오차(λ=0.20) + 다양성(λ=0.10) + 효율성(λ=0.08)
+- 체크포인트 로드 시 line 579-583에서 복원됨
+
+변경 위치
+- D:\잠재공간 실험실\실험실 시즌2\uzr\train_meta_3brains.py:1793
+- D:\잠재공간 실험실\실험실 시즌2\uzr\train_meta_3brains.py:1810

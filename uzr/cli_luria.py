@@ -1,7 +1,8 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 import argparse
-import readline  # 편의
+import readline  # ?몄쓽
 import csv
 import re
 import glob
@@ -13,23 +14,38 @@ from datetime import datetime
 
 import torch
 
-# 로컬 패키지 임포트 (패키지 모드 권장)
-# 프로젝트 루트에서: python -m uzr.cli_luria --device cpu --resume ckpt.pt
-from .model import UZRModel, KoEnTokenizer  # 토크나이저/모델 정의 있음
+# 濡쒖뺄 ?⑦궎吏 ?꾪룷??(?⑦궎吏 紐⑤뱶 沅뚯옣)
+# ?꾨줈?앺듃 猷⑦듃?먯꽌: python -m uzr.cli_luria --device cpu --resume ckpt.pt
+from .model import UZRModel, KoEnTokenizer  # tokenizer/model
+try:
+    from .npu import OrtEngine
+except Exception:
+    OrtEngine = None  # optional
 from .meta_core import AbstainThresholds, maybe_abstain
-from .train_meta_3brains import inner_adapt_z_3brains  # z 적응 루틴
+from .train_meta_3brains import inner_adapt_z_3brains  # z ?곸쓳 猷⑦떞
 from .memory import CompressedMemory
 
 # -----------------------------
-# 엔진 래퍼: 추론(NPU/ORT/CPU) vs 학습(CPU)
+# ?붿쭊 ?섑띁: 異붾줎(NPU/ORT/CPU) vs ?숈뒿(CPU)
 # -----------------------------
 
 def f3(x):
-    """None-safe 3자리 포맷팅"""
+    """None-safe 3?먮- ?щ㎎??""
     return "nan" if x is None else f"{x:.3f}"
 
+def _intent_force_from_model(model):
+    try:
+        _, toggle = model.identity_intent_control()
+    except Exception:
+        return None
+    if toggle <= -0.5:
+        return False
+    if toggle >= 0.5:
+        return True
+    return None
+
 def default_save_path(path):
-    """타임스탬프 기본 파일명 생성"""
+    """??꾩뒪?ы봽 湲곕낯 ?뚯씪紐??앹꽦"""
     if path and path != "luria_session.pt":
         return path
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -37,7 +53,7 @@ def default_save_path(path):
 
 @dataclass
 class HistoryItem:
-    """대화 히스토리 항목"""
+    """????덉뒪?좊- ??ぉ"""
     step: int
     user_input: str
     luria_response: str
@@ -53,18 +69,19 @@ class SessionState:
     history: List[HistoryItem] = field(default_factory=list)
 
 def build_model(device: torch.device, mem: Optional[CompressedMemory], ckpt_args: Optional[Dict[str, Any]] = None) -> UZRModel:
-    # 하이퍼파라미터는 체크포인트 또는 기본값 사용
+    # ?섏씠?쇳뙆?쇰??곕뒗 泥댄겕?ъ씤???먮뒗 湲곕낯媛??ъ슜
     max_len = ckpt_args.get("max_len", 128) if ckpt_args else 128
     tok = KoEnTokenizer(max_len=max_len)
 
-    # 체크포인트에서 하이퍼파라미터 로드 또는 기본값 사용
+    # 泥댄겕?ъ씤?몄뿉???섏씠?쇳뙆?쇰???濡쒕뱶 ?먮뒗 湲곕낯媛??ъ슜
     if ckpt_args:
         d_model = ckpt_args.get("d_model", 256)
         z_dim = ckpt_args.get("z_dim", 128)
         z_think_dim = ckpt_args.get("z_think_dim", 64)
         z_lang_dim = ckpt_args.get("z_lang_dim", 32)
         num_langs = ckpt_args.get("num_langs", 4)
-        identity_self_dim = ckpt_args.get("identity_self_dim", 2)
+        identity_self_dim = ckpt_args.get("identity_self_dim", 32)
+        identity_intent_dim = ckpt_args.get("identity_intent_dim", min(16, max(0, identity_self_dim // 2)))
         z_slow_lang_dim = ckpt_args.get("z_slow_lang_dim", 96)
         z_slow_logic_dim = ckpt_args.get("z_slow_logic_dim", 96)
         z_bridge_dim = ckpt_args.get("z_bridge_dim", 64)
@@ -74,7 +91,8 @@ def build_model(device: torch.device, mem: Optional[CompressedMemory], ckpt_args
         z_think_dim = 64
         z_lang_dim = 32
         num_langs = 4
-        identity_self_dim = 2
+        identity_self_dim = 32
+        identity_intent_dim = 16
         z_slow_lang_dim = 96
         z_slow_logic_dim = 96
         z_bridge_dim = 64
@@ -83,7 +101,7 @@ def build_model(device: torch.device, mem: Optional[CompressedMemory], ckpt_args
         vocab_size=tok.vocab_size,
         d_model=d_model, n_head=4, n_layer=4,
         z_dim=z_dim, z_think_dim=z_think_dim, z_lang_dim=z_lang_dim,
-        num_langs=num_langs, identity_self_dim=identity_self_dim,
+        num_langs=num_langs, identity_self_dim=identity_self_dim, identity_intent_dim=identity_intent_dim,
         z_slow_lang_dim=z_slow_lang_dim, z_slow_logic_dim=z_slow_logic_dim, z_bridge_dim=z_bridge_dim,
         memory=mem, use_self_eval=True
     )
@@ -114,9 +132,7 @@ def _entropy_from_probs(probs: torch.Tensor) -> float:
 
 def generate_tokens(model: UZRModel, tok: KoEnTokenizer, prompt_ids: List[int], z_for_q: Dict[str, torch.Tensor], device: torch.device,
                     max_new_tokens: int = 128, temperature: float = 0.7, top_p: float = 0.9, top_k: int = 40,
-                    rep_penalty: float = 1.10, min_eos_len: int = 8) -> Dict[str, Any]:
-    model.eval()
-    ids = torch.tensor(prompt_ids, dtype=torch.long, device=device).unsqueeze(0)
+                    rep_penalty: float = 1.10, min_eos_len: int = 8, ort_engine=None) -> Dict[str, Any]:
     last_entropy: Optional[float] = None
     # Respect encoder maximum length
     try:
@@ -127,19 +143,19 @@ def generate_tokens(model: UZRModel, tok: KoEnTokenizer, prompt_ids: List[int], 
     steps = min(int(max_new_tokens), int(budget))
     with torch.inference_mode(), torch.cuda.amp.autocast(enabled=(device.type == "cuda")):
         for _ in range(steps):
-            logits = model(ids, z_for_q)[:, -1, :]
-            if rep_penalty and rep_penalty != 1.0:
-                uniq = ids.unique()
-                logits[:, uniq] = logits[:, uniq] / float(rep_penalty)
-            logits = logits / max(float(temperature), 1e-5)
-            probs = torch.softmax(logits, dim=-1).squeeze(0)
-
-            # lacomi.txt prescription: top-k + top-p sampling (NO argmax)
-            # Apply top-k filtering first, then top-p
-            if top_k > 0 and top_k < probs.numel():
-                # Keep only top-k tokens
-                top_k_probs, top_k_idx = torch.topk(probs, k=min(top_k, probs.numel()))
-                # Zero out non-top-k tokens
+            # Use ORT/QNN engine if available to compute logits; else PyTorch model
+            if ort_engine is not None:
+                try:
+                    out = ort_engine.run(input_ids=ids.detach().cpu().numpy())
+                    logits_np = out.get("logits", None)
+                    if logits_np is None:
+                        logits_np = list(out.values())[0]
+                    logits_full = torch.from_numpy(logits_np).to(device)
+                    logits = logits_full[:, -1, :]
+                except Exception:
+                    logits = model(ids, z_for_q)[:, -1, :]
+            else:
+                logits = model(ids, z_for_q)[:, -1, :]
                 probs_filtered = torch.zeros_like(probs)
                 probs_filtered.scatter_(0, top_k_idx, top_k_probs)
                 probs = probs_filtered
@@ -179,8 +195,7 @@ def predict(model: UZRModel, tok: KoEnTokenizer, prompt: str, state: SessionStat
         top_p=float(gen_cfg.get("top_p", 0.9)),
         top_k=int(gen_cfg.get("top_k", 40)),
         rep_penalty=float(gen_cfg.get("rep_penalty", 1.10)),
-        min_eos_len=int(gen_cfg.get("min_eos_len", 8)),
-    )
+        min_eos_len=int(gen_cfg.get("min_eos_len", 8)), ort_engine=gen_cfg.get("ort_engine", None))
     gen_ids = out["gen_ids"]
     text = tok.decode(gen_ids).strip()
     user_tokens = len(prompt_ids)
@@ -202,7 +217,7 @@ def predict(model: UZRModel, tok: KoEnTokenizer, prompt: str, state: SessionStat
         em = torch.tensor([ent], dtype=torch.float32)
         mask = maybe_abstain(cm, em, thr)
         if bool(mask[0].item()):
-            text = str(gen_cfg.get("abstain_message", "[보류] 확신이 낮아 답변을 보류합니다."))
+            text = str(gen_cfg.get("abstain_message", "[蹂대쪟] ?뺤떊????븘 ?듬???蹂대쪟?⑸땲??"))
             # Do not change token counts; preserve logging consistency
     return {
         "text": text,
@@ -214,11 +229,11 @@ def predict(model: UZRModel, tok: KoEnTokenizer, prompt: str, state: SessionStat
 
 def adapt_z(model_cpu: UZRModel, tok: KoEnTokenizer, Xc_txt: str, Yc_txt: str, state: SessionState, steps:int=6,
             lam=(1e-3,1e-3,1e-3), eta=0.5, device=torch.device("cpu")) -> Dict[str, torch.Tensor]:
-    # inner_adapt는 CPU 경로에서 수행
+    # inner_adapt??CPU 寃쎈줈?먯꽌 ?섑뻾
     model_cpu.eval().to(device)
     Xc, Yc = encode_pair(tok, Xc_txt, Yc_txt, device=device)
 
-    # 초기 z는 현 세션 값에서 가져옴
+    # 珥덇린 z?????몄뀡 媛믪뿉??媛?몄샂
     z_lang0 = state.z_for_q["slow_lang"].detach().to(device)
     z_logic0 = state.z_for_q["slow_logic"].detach().to(device)
     z_bridge0 = state.z_for_q["bridge"].detach().to(device)
@@ -228,17 +243,17 @@ def adapt_z(model_cpu: UZRModel, tok: KoEnTokenizer, Xc_txt: str, Yc_txt: str, s
         lam_lang=lam[0], lam_logic=lam[1], lam_bridge=lam[2],
         eta=eta, steps=steps
     )
-    return {"slow_lang": zl, "slow_logic": zg, "bridge": zb}  # 새 z
+    return {"slow_lang": zl, "slow_logic": zg, "bridge": zb}  # ??z
 
 def init_session(model: UZRModel, device: torch.device) -> SessionState:
-    # 베이스 z 초기화: 기본 이니셜라이저 사용
+    # 踰좎씠??z 珥덇린?? 湲곕낯 ?대땲?쒕씪?댁? ?ъ슜
     z_lang0 = model.init_z_slow_lang(batch_size=1)[0].to(device)
     z_logic0 = model.init_z_slow_logic(batch_size=1)[0].to(device)
     z_bridge0 = model.init_z_bridge(batch_size=1)[0].to(device)
     return SessionState(z_for_q={"slow_lang": z_lang0, "slow_logic": z_logic0, "bridge": z_bridge0})
 
 def init_log_csv(log_dir: str) -> str:
-    """로그 디렉토리와 CSV 파일 초기화"""
+    """濡쒓렇 ?붾젆?좊-? CSV ?뚯씪 珥덇린??""
     os.makedirs(log_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     csv_path = os.path.join(log_dir, f"luria_chat_{timestamp}.csv")
@@ -257,7 +272,7 @@ def log_interaction(csv_path: str, step: int, user_input: str, user_tokens: int,
                    luria_response: str, response_tokens: int,
                    conf: Optional[float], ent: Optional[float],
                    action: str, correct_answer: str = ""):
-    """상호작용 로그를 CSV에 기록"""
+    """?곹샇?묒슜 濡쒓렇瑜?CSV??湲곕줉"""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     with open(csv_path, "a", newline="", encoding="utf-8") as f:
@@ -272,7 +287,7 @@ def log_interaction(csv_path: str, step: int, user_input: str, user_tokens: int,
 
 def save_checkpoint(model: UZRModel, mem: CompressedMemory, state: SessionState,
                    ckpt_args: Optional[Dict], save_path: str):
-    """현재 세션을 체크포인트로 저장 (원자적 저장)"""
+    """?꾩옱 ?몄뀡??泥댄겕?ъ씤?몃줈 ???(?먯옄?????"""
     path = default_save_path(save_path)
     tmp = path + ".tmp"
 
@@ -285,10 +300,10 @@ def save_checkpoint(model: UZRModel, mem: CompressedMemory, state: SessionState,
     }
     torch.save(ckpt, tmp)
     os.replace(tmp, path)
-    print(f"[저장 완료] {path}")
+    print(f"[????꾨즺] {path}")
 
 def save_train_compatible_last(model: UZRModel, mem: CompressedMemory, ckpt_args: Optional[Dict], path: str = "uzr_3brains_ckpt_last.pt"):
-    """트레인 재개와 호환되는 최소 스냅샷을 저장한다."""
+    """?몃젅???ш컻? ?명솚?섎뒗 理쒖냼 ?ㅻ깄?룹쓣 ??ν븳??"""
     payload = {
         "model": model.state_dict(),
         "args": ckpt_args if ckpt_args else {},
@@ -298,10 +313,10 @@ def save_train_compatible_last(model: UZRModel, mem: CompressedMemory, ckpt_args
     tmp = path + ".tmp"
     torch.save(payload, tmp)
     os.replace(tmp, path)
-    print(f"[마지막 스냅샷] {path}")
+    print(f"[留덉?留??ㅻ깄?? {path}")
 
 def parse_saved_command(s: str) -> Optional[tuple]:
-    """'/saved "질문" = "정답"' 형식 파싱 (견고한 버전)"""
+    """'/saved "吏덈Ц" = "?뺣떟"' ?뺤떇 ?뚯떛 (寃ш퀬??踰꾩쟾)"""
     if not s.startswith("/saved"):
         return None
 
@@ -313,15 +328,15 @@ def parse_saved_command(s: str) -> Optional[tuple]:
     if "=" not in rest:
         return None
 
-    # 첫 번째 = 기준으로 split (정답에 =가 들어갈 수 있음)
+    # 泥?踰덉㎏ = 湲곗??쇰줈 split (?뺣떟??=媛 ?ㅼ뼱媛????덉쓬)
     q, a = [t.strip().strip("\"'") for t in rest.split("=", 1)]
     return (q, a) if q and a else None
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"])  # ORT/QNN 붙일 땐 별도 분기 추가
+    ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"])  # ORT/QNN 遺숈씪 ??蹂꾨룄 遺꾧린 異붽?
     ap.add_argument("--resume", default=None, help="checkpoint .pt path")
-    ap.add_argument("--mem_dir", default="./", help="memory log dir (writes.csv, entropy.csv 등)")
+    ap.add_argument("--mem_dir", default="./", help="memory log dir (writes.csv, entropy.csv ??")
     ap.add_argument("--log_dir", default="./luria-log", help="chat log directory")
     ap.add_argument("--steps", type=int, default=6, help="inner_adapt steps")
     ap.add_argument("--save_path", default="luria_session.pt", help="session save path")
@@ -337,77 +352,96 @@ def main():
     ap.add_argument("--abstain", choices=["on", "off"], default="off", help="enable abstain gating on low confidence/high entropy")
     ap.add_argument("--abstain_conf_min", type=float, default=0.65)
     ap.add_argument("--abstain_ent_max", type=float, default=2.2)
-    ap.add_argument("--abstain_message", default="[보류] 확신이 낮아 답변을 보류합니다.")
-    args = ap.parse_args()
+    ap.add_argument("--abstain_message", default="[蹂대쪟] ?뺤떊????븘 ?듬???蹂대쪟?⑸땲??")
+    # ORT/QNN engine options
+    ap.add_argument("--ort_model", type=str, default="", help="ONNX(QDQ) model path for ORT/QNN engine")
+    ap.add_argument("--engine", type=str, default="torch", choices=["torch","qnn","qnn_strict","ort_fallback"], help="Inference engine selection")
+args = ap.parse_args()
 
-    # 장치
+# ORT/QNN engine (optional)
+ort_engine = None
+if args.engine != "torch" and args.ort_model:
+    if OrtEngine is None:
+        print("[경고] onnxruntime-qnn 미설치로 ORT/QNN 엔진 비활성화. PyTorch 경로로 진행합니다.")
+    else:
+        backend = "htp"
+        mode = "qnn" if args.engine == "qnn" else ("qnn_strict" if args.engine == "qnn_strict" else "ort_fallback")
+        try:
+            ort_engine = OrtEngine(args.ort_model, mode=mode, backend=backend)
+            print(f"[engine] ORT engine ready: mode={mode}, backend={backend}")
+        except Exception as e:
+            print(f"[경고] ORT 엔진 초기화 실패: {e}. PyTorch 경로로 진행합니다.")
+    # ?μ튂
     if args.device == "cuda" and not torch.cuda.is_available():
-        print("[경고] CUDA 사용 불가. CPU로 대체합니다.")
+        print("[寃쎄퀬] CUDA ?ъ슜 遺덇?. CPU濡??泥댄빀?덈떎.")
         args.device = "cpu"
     device = torch.device(args.device)
 
-    # 체크포인트 로드 (모델 생성 전에 args 확인)
+    # 泥댄겕?ъ씤??濡쒕뱶 (紐⑤뜽 ?앹꽦 ?꾩뿉 args ?뺤씤)
     ckpt_args = None
     ckpt = None
     if args.resume and os.path.exists(args.resume):
         try:
             ckpt = torch.load(args.resume, map_location=device, weights_only=False)
         except TypeError:
-            # PyTorch 구버전 호환성 (weights_only 파라미터 없음)
+            # PyTorch 援щ쾭???명솚??(weights_only ?뚮씪誘명꽣 ?놁쓬)
             ckpt = torch.load(args.resume, map_location=device)
         ckpt_args = ckpt.get("args", None)
 
-    # 메모리
+    # 硫붾え由?
     mem = CompressedMemory(device=str(device), log_dir=args.mem_dir)
 
-    # 모델 로드 (체크포인트 args 사용)
+    # 紐⑤뜽 濡쒕뱶 (泥댄겕?ъ씤??args ?ъ슜)
     model = build_model(device, mem, ckpt_args)
     max_len = ckpt_args.get("max_len", 128) if ckpt_args else 128
     tok = KoEnTokenizer(max_len=max_len)
 
-    # 체크포인트 state_dict 복원
+    # 泥댄겕?ъ씤??state_dict 蹂듭썝
     if ckpt is not None:
         if "model" in ckpt:
             model.load_state_dict(ckpt["model"], strict=False)
         if "memory" in ckpt and isinstance(mem, CompressedMemory):
             try:
                 mem.load_state_dict(ckpt["memory"])
-                print(f"[메모리 복원] items={len(mem.items)} learner={mem.has_learner()}")
+                print(f"[硫붾え由?蹂듭썝] items={len(mem.items)} learner={mem.has_learner()}")
             except Exception as e:
-                print(f"[경고] 메모리 복원 실패: {e}")
+                print(f"[寃쎄퀬] 硫붾え由?蹂듭썝 ?ㅽ뙣: {e}")
 
-    # 세션 상태
+    # ?몄뀡 ?곹깭
     state = init_session(model, device)
 
-    # 로그 파일 초기화
+    # 濡쒓렇 ?뚯씪 珥덇린??
     csv_path = init_log_csv(args.log_dir)
-    print(f"[로그 시작] {csv_path}")
+    print(f"[濡쒓렇 ?쒖옉] {csv_path}")
 
     print("=== Luria Chat CLI (infer=NPU/CPU, adapt=CPU) ===")
-    print("명령:")
-    print("  /no [번호]         - 직전 또는 히스토리 번호의 응답이 틀렸음 (정답 입력 필요)")
-    print("  /yes [번호]        - 직전 또는 히스토리 번호의 응답이 맞았음")
-    print("  /set_y <정답>      - 정답 등록")
-    print("  /saved \"질문\" = \"정답\" - 즉시 학습")
-    print("  /history           - 최근 대화 히스토리 표시")
+    print("紐낅졊:")
+    print("  /no [踰덊샇]         - 吏곸쟾 ?먮뒗 ?덉뒪?좊- 踰덊샇???묐떟????몄쓬 (?뺣떟 ?낅젰 ?꾩슂)")
+    print("  /yes [踰덊샇]        - 吏곸쟾 ?먮뒗 ?덉뒪?좊- 踰덊샇???묐떟??留욎븯??")
+    print("  /set_y <?뺣떟>      - ?뺣떟 ?깅줉")
+    print("  /saved \"吏덈Ц\" = \"?뺣떟\" - 利됱떆 ?숈뒿")
+    print("  /history           - 理쒓렐 ????덉뒪?좊- ?쒖떆")
     print("  /save, /load, /reset, /quit")
-    print(f"디코딩: T={args.temperature}, top_p={args.top_p}, top_k={args.top_k}, rep_penalty={args.rep_penalty}, max_len={args.max_gen_len}")
+    if ort_engine is not None:
+        print("  /lora_npz <path> - Load adapter/FiLM params (.npz) and swap into engine")
+        print("  /hot_swap - Recreate ORT session (shadow→active) and warmup")
+    print(f"?붿퐫?? T={args.temperature}, top_p={args.top_p}, top_k={args.top_k}, rep_penalty={args.rep_penalty}, max_len={args.max_gen_len}")
     if args.abstain == "on":
-        print(f"보류 게이트: conf_min={args.abstain_conf_min}, ent_max={args.abstain_ent_max}")
+        print(f"蹂대쪟 寃뚯씠?? conf_min={args.abstain_conf_min}, ent_max={args.abstain_ent_max}")
     if args.autosave_steps:
-        print(f"오토세이브: {args.autosave_steps} 스텝마다 자동 저장")
+        print(f"?ㅽ넗?몄씠釉? {args.autosave_steps} ?ㅽ뀦留덈떎 ?먮룞 ???)
     pending_x: Optional[str] = None
     pending_pred: Optional[Dict[str, Any]] = None
     staged_y: Optional[str] = None
 
-    # 자동 저장 유틸
+    # ?먮룞 ????좏떥
     def maybe_autosave():
         if args.autosave_steps and state.step % args.autosave_steps == 0:
             save_checkpoint(model, mem, state, ckpt_args, args.save_path)
             save_train_compatible_last(model, mem, ckpt_args, "uzr_3brains_ckpt_last.pt")
             log_interaction(csv_path, state.step, "[autosave]", 0, "", 0, None, None, "autosave")
 
-    # 종료 훅: 정상 종료/시그널에서 항상 최신 스냅샷 남김
+    # 醫낅즺 ?? ?뺤긽 醫낅즺/?쒓렇?먯뿉????긽 理쒖떊 ?ㅻ깄???④?
     def _graceful_exit():
         try:
             save_checkpoint(model, mem, state, ckpt_args, args.save_path)
@@ -416,7 +450,7 @@ def main():
             pass
 
     def _sig_handler(signum, frame):
-        print(f"\n[신호 {signum}] 안전 저장 후 종료")
+        print(f"\n[?좏샇 {signum}] ?덉쟾 ?????醫낅즺")
         _graceful_exit()
         sys.exit(0)
 
@@ -425,14 +459,14 @@ def main():
         try:
             signal.signal(sig, _sig_handler)
         except Exception:
-            # 일부 환경(예: Jupyter)에서는 signal 등록이 제한될 수 있음
+            # ?쇰? ?섍꼍(?? Jupyter)?먯꽌??signal ?깅줉???쒗븳?????덉쓬
             pass
 
     while True:
         try:
-            s = input("유저> ").strip()
+            s = input("?좎?> ").strip()
         except (EOFError, KeyboardInterrupt):
-            print("\n종료")
+            print("\n醫낅즺")
             break
 
         if not s:
@@ -440,27 +474,27 @@ def main():
         if s == "/quit":
             break
 
-        # /save 명령어: 현재 세션 저장
+        # /save 紐낅졊?? ?꾩옱 ?몄뀡 ???
         if s == "/save":
             save_checkpoint(model, mem, state, ckpt_args, args.save_path)
             save_train_compatible_last(model, mem, ckpt_args, "uzr_3brains_ckpt_last.pt")
-            log_interaction(csv_path, state.step, s, 0, "[세션 저장됨]", 0, None, None, "save")
+            log_interaction(csv_path, state.step, s, 0, "[?몄뀡 ??λ맖]", 0, None, None, "save")
             continue
 
-        # /load 명령어: 세션 복원
+        # /load 紐낅졊?? ?몄뀡 蹂듭썝
         if s.startswith("/load"):
-            # 경로 파싱
+            # 寃쎈줈 ?뚯떛
             if s.strip() == "/load":
                 path = args.save_path
             else:
                 user_input = s.split(" ", 1)[1].strip()
 
-                # 파일이 존재하면 그대로 사용
+                # ?뚯씪??議댁옱?섎㈃ 洹몃?濡??ъ슜
                 if os.path.exists(user_input):
                     path = user_input
                 else:
-                    # 패턴으로 검색 (타임스탬프 포함)
-                    # luria_session_*{user_input}*.pt 형태로 검색
+                    # ?⑦꽩?쇰줈 寃??(??꾩뒪?ы봽 ?ы븿)
+                    # luria_session_*{user_input}*.pt ?뺥깭濡?寃??
                     patterns = [
                         f"luria_session_*{user_input}*.pt",
                         f"*{user_input}*.pt",
@@ -471,38 +505,38 @@ def main():
                     for pattern in patterns:
                         matched_files.extend(glob.glob(pattern))
 
-                    # 중복 제거
+                    # 以묐났 ?쒓굅
                     matched_files = list(set(matched_files))
 
                     if len(matched_files) == 0:
-                        print(f"[에러] 파일을 찾을 수 없음: {user_input}")
-                        print(f"검색 패턴: luria_session_*{user_input}*.pt")
+                        print(f"[?먮윭] ?뚯씪??李얠쓣 ???놁쓬: {user_input}")
+                        print(f"寃???⑦꽩: luria_session_*{user_input}*.pt")
                         continue
                     elif len(matched_files) == 1:
                         path = matched_files[0]
-                        print(f"[자동 선택] {path}")
+                        print(f"[?먮룞 ?좏깮] {path}")
                     else:
-                        print(f"[{len(matched_files)}개 파일 발견]")
+                        print(f"[{len(matched_files)}媛??뚯씪 諛쒓껄]")
                         for i, f in enumerate(matched_files, 1):
-                            # 파일 수정 시간 표시
+                            # ?뚯씪 ?섏젙 ?쒓컙 ?쒖떆
                             mtime = os.path.getmtime(f)
                             mtime_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
-                            print(f"  {i}. {f} (수정: {mtime_str})")
+                            print(f"  {i}. {f} (?섏젙: {mtime_str})")
                         try:
-                            choice = input("번호 선택> ").strip()
+                            choice = input("踰덊샇 ?좏깮> ").strip()
                             idx = int(choice) - 1
                             if 0 <= idx < len(matched_files):
                                 path = matched_files[idx]
                             else:
-                                print("[에러] 잘못된 번호")
+                                print("[?먮윭] ?섎せ??踰덊샇")
                                 continue
                         except (ValueError, EOFError, KeyboardInterrupt):
-                            print("[취소됨]")
+                            print("[痍⑥냼??")
                             continue
 
-            # 파일 로드
+            # ?뚯씪 濡쒕뱶
             if not os.path.exists(path):
-                print(f"[에러] 파일을 찾을 수 없음: {path}")
+                print(f"[?먮윭] ?뚯씪??李얠쓣 ???놁쓬: {path}")
                 continue
 
             try:
@@ -516,83 +550,84 @@ def main():
             if "memory" in ck and isinstance(mem, CompressedMemory):
                 try:
                     mem.load_state_dict(ck["memory"])
-                    print(f"[메모리 복원] items={len(mem.items)} learner={mem.has_learner()}")
+                    print(f"[硫붾え由?蹂듭썝] items={len(mem.items)} learner={mem.has_learner()}")
                 except Exception as e:
-                    print(f"[경고] 메모리 복원 실패: {e}")
-            print(f"[로드 완료] {path} (step={state.step})")
-            log_interaction(csv_path, state.step, s, 0, f"[로드:{path}]", 0, None, None, "load")
+                    print(f"[寃쎄퀬] 硫붾え由?蹂듭썝 ?ㅽ뙣: {e}")
+            print(f"[濡쒕뱶 ?꾨즺] {path} (step={state.step})")
+            log_interaction(csv_path, state.step, s, 0, f"[濡쒕뱶:{path}]", 0, None, None, "load")
             continue
 
-        # /reset 명령어: 세션 초기화
+        # /reset 紐낅졊?? ?몄뀡 珥덇린??
         if s == "/reset":
             state = init_session(model, device)
             pending_x = None; pending_pred = None; staged_y = None
-            print("세션 초기화")
-            log_interaction(csv_path, state.step, s, 0, "[세션 초기화됨]", 0, None, None, "reset")
+            print("?몄뀡 珥덇린??)
+            log_interaction(csv_path, state.step, s, 0, "[?몄뀡 珥덇린?붾맖]", 0, None, None, "reset")
             continue
 
-        # /history 명령어: 대화 히스토리 표시
+        # /history 紐낅졊?? ????덉뒪?좊- ?쒖떆
         if s == "/history":
             if not state.history:
-                print("히스토리가 비어있습니다.")
+                print("?덉뒪?좊-媛 鍮꾩뼱?덉뒿?덈떎.")
                 continue
-            print("\n=== 최근 대화 히스토리 (최대 20개) ===")
-            # 최근 20개만 표시
+            print("\n=== 理쒓렐 ????덉뒪?좊- (理쒕? 20媛? ===")
+            # 理쒓렐 20媛쒕쭔 ?쒖떆
             recent = state.history[-20:]
             for idx, item in enumerate(recent, 1):
                 print(f"{idx:2d}. [step={item.step}] {item.user_input[:40]}")
                 print(f"    -> {item.luria_response[:60]}")
-                print(f"    (토큰: {item.user_tokens}/{item.response_tokens}, "
+                print(f"    (?좏겙: {item.user_tokens}/{item.response_tokens}, "
                       f"conf={f3(item.conf)}, ent={f3(item.entropy)})")
-            print("사용법: /no <번호> 또는 /yes <번호>\n")
+            print("?ъ슜踰? /no <踰덊샇> ?먮뒗 /yes <踰덊샇>\n")
             continue
 
-        # /saved "질문" = "정답" 형식 파싱
+        # /saved "吏덈Ц" = "?뺣떟" ?뺤떇 ?뚯떛
         saved_pair = parse_saved_command(s)
         if saved_pair:
             question, answer = saved_pair
-            print(f"[학습 데이터 등록] Q: {question} → A: {answer}")
-            # 즉시 학습 실행
-            print("[학습] inner_adapt_z_3brains 실행 중...")
+            print(f"[?숈뒿 ?곗씠???깅줉] Q: {question} ??A: {answer}")
+            # 利됱떆 ?숈뒿 ?ㅽ뻾
+            print("[?숈뒿] inner_adapt_z_3brains ?ㅽ뻾 以?..")
             new_z = adapt_z(model, tok, question, answer, state, steps=args.steps, device=device)
             state.z_for_q = {k: v.to(device) for k, v in new_z.items()}
 
-            # 메모리 커밋
+            # 硫붾え由?而ㅻ컠
             enc_avg, _ = encode_pair(tok, question, None, device=device)
             enc_avg = model.avg_embed(enc_avg).mean(dim=0).detach()
             key = enc_avg
             val = {"z_slow": state.z_for_q["bridge"].detach()}
-            mem.add_with_policy(key, val, state.step, bench_callback=lambda: True)
+            intent_force = _intent_force_from_model(model)
+            mem.add_with_policy(key, val, state.step, meta={"luria_intent_force": intent_force}, bench_callback=lambda: True)
 
-            print("[학습 완료] z 갱신 및 메모리 처리")
+            print("[?숈뒿 ?꾨즺] z 媛깆떊 諛?硫붾え由?泥섎-")
             log_interaction(csv_path, state.step, question, len(tok.encode(question)),
                           answer, len(tok.encode(answer)), None, None, "saved_learning", answer)
             state.step += 1
             continue
 
-        # 정답 세팅
+        # ?뺣떟 ?명똿
         if s.startswith("/set_y "):
             staged_y = s[len("/set_y "):].strip()
-            print(f"[정답 후보 등록] Yc = {staged_y}")
-            log_interaction(csv_path, state.step, s, 0, f"[정답 등록: {staged_y}]", 0, None, None, "set_y", staged_y)
+            print(f"[?뺣떟 ?꾨낫 ?깅줉] Yc = {staged_y}")
+            log_interaction(csv_path, state.step, s, 0, f"[?뺣떟 ?깅줉: {staged_y}]", 0, None, None, "set_y", staged_y)
             continue
 
-        # 판정 커맨드: /no [번호]
+        # ?먯젙 而ㅻ㎤?? /no [踰덊샇]
         if s.startswith("/no"):
-            # 번호 파싱
+            # 踰덊샇 ?뚯떛
             hist_idx = None
             if len(s.split()) > 1:
                 try:
                     hist_idx = int(s.split()[1]) - 1  # 1-based to 0-based
                 except ValueError:
-                    print("[에러] 올바른 번호를 입력하세요. 예: /no 3")
+                    print("[?먮윭] ?щ컮瑜?踰덊샇瑜??낅젰?섏꽭?? ?? /no 3")
                     continue
 
-            # 히스토리에서 선택 또는 직전 대화 사용
+            # ?덉뒪?좊-?먯꽌 ?좏깮 ?먮뒗 吏곸쟾 ????ъ슜
             if hist_idx is not None:
                 recent = state.history[-20:]
                 if hist_idx < 0 or hist_idx >= len(recent):
-                    print(f"[에러] 잘못된 번호입니다. 1-{len(recent)} 사이로 입력하세요.")
+                    print(f"[?먮윭] ?섎せ??踰덊샇?낅땲?? 1-{len(recent)} ?ъ씠濡??낅젰?섏꽭??")
                     continue
                 hist_item = recent[hist_idx]
                 target_x = hist_item.user_input
@@ -602,26 +637,26 @@ def main():
                     "conf": hist_item.conf,
                     "entropy": hist_item.entropy
                 }
-                print(f"[선택] {hist_idx+1}번: {target_x[:40]} -> {hist_item.luria_response[:40]}")
+                print(f"[?좏깮] {hist_idx+1}踰? {target_x[:40]} -> {hist_item.luria_response[:40]}")
             else:
-                # 직전 대화 사용
+                # 吏곸쟾 ????ъ슜
                 if pending_x is None or pending_pred is None:
-                    print("직전 질의/응답이 없습니다. /history로 확인 후 번호를 지정하세요.")
+                    print("吏곸쟾 吏덉쓽/?묐떟???놁뒿?덈떎. /history濡??뺤씤 ??踰덊샇瑜?吏?뺥븯?몄슂.")
                     continue
                 target_x = pending_x
                 target_pred = pending_pred
 
-            # 정답 확인
+            # ?뺣떟 ?뺤씤
             if not staged_y:
-                print("정답이 없습니다. 먼저 `/set_y <정답>`으로 알려주세요.")
+                print("?뺣떟???놁뒿?덈떎. 癒쇱? `/set_y <?뺣떟>`?쇰줈 ?뚮젮二쇱꽭??")
                 continue
 
-            # 학습(adapt) 경로
-            print("[학습] inner_adapt_z_3brains 실행 중...")
+            # ?숈뒿(adapt) 寃쎈줈
+            print("[?숈뒿] inner_adapt_z_3brains ?ㅽ뻾 以?..")
             new_z = adapt_z(model, tok, target_x, staged_y, state, steps=args.steps, device=device)
-            # 세션 z 갱신
+            # ?몄뀡 z 媛깆떊
             state.z_for_q = {k: v.to(device) for k, v in new_z.items()}
-            # 메모리 커밋(2PC 벤치 콜백 예시)
+            # 硫붾え由?而ㅻ컠(2PC 踰ㅼ튂 肄쒕갚 ?덉떆)
             enc_avg, _ = encode_pair(tok, target_x, None, device=device)
             enc_avg = model.avg_embed(enc_avg).mean(dim=0).detach()
             key = enc_avg
@@ -631,10 +666,11 @@ def main():
                 ent = target_pred.get("entropy", 9.9) or 9.9
                 conf = target_pred.get("conf", 0.0) or 0.0
                 return (conf >= 0.62) or (ent <= 3.0)
-            mem.add_with_policy(key, val, step, bench_callback=bench)
-            print("[학습 완료] z 갱신 및 메모리 처리")
+            intent_force = _intent_force_from_model(model)
+            mem.add_with_policy(key, val, step, meta={"luria_intent_force": intent_force}, bench_callback=bench)
+            print("[?숈뒿 ?꾨즺] z 媛깆떊 諛?硫붾え由?泥섎-")
 
-            # 로그 기록
+            # 濡쒓렇 湲곕줉
             log_interaction(csv_path, state.step, target_x, target_pred.get("user_tokens", 0),
                           staged_y, len(tok.encode(staged_y)),
                           target_pred.get("conf"), target_pred.get("entropy"), "no_adapt", staged_y)
@@ -644,22 +680,22 @@ def main():
             maybe_autosave()
             continue
 
-        # 판정 커맨드: /yes [번호]
+        # ?먯젙 而ㅻ㎤?? /yes [踰덊샇]
         if s.startswith("/yes"):
-            # 번호 파싱
+            # 踰덊샇 ?뚯떛
             hist_idx = None
             if len(s.split()) > 1:
                 try:
                     hist_idx = int(s.split()[1]) - 1  # 1-based to 0-based
                 except ValueError:
-                    print("[에러] 올바른 번호를 입력하세요. 예: /yes 3")
+                    print("[?먮윭] ?щ컮瑜?踰덊샇瑜??낅젰?섏꽭?? ?? /yes 3")
                     continue
 
-            # 히스토리에서 선택 또는 직전 대화 사용
+            # ?덉뒪?좊-?먯꽌 ?좏깮 ?먮뒗 吏곸쟾 ????ъ슜
             if hist_idx is not None:
                 recent = state.history[-20:]
                 if hist_idx < 0 or hist_idx >= len(recent):
-                    print(f"[에러] 잘못된 번호입니다. 1-{len(recent)} 사이로 입력하세요.")
+                    print(f"[?먮윭] ?섎せ??踰덊샇?낅땲?? 1-{len(recent)} ?ъ씠濡??낅젰?섏꽭??")
                     continue
                 hist_item = recent[hist_idx]
                 target_x = hist_item.user_input
@@ -670,25 +706,26 @@ def main():
                     "conf": hist_item.conf,
                     "entropy": hist_item.entropy
                 }
-                print(f"[선택] {hist_idx+1}번: {target_x[:40]} -> {hist_item.luria_response[:40]}")
+                print(f"[?좏깮] {hist_idx+1}踰? {target_x[:40]} -> {hist_item.luria_response[:40]}")
             else:
-                # 직전 대화 사용
+                # 吏곸쟾 ????ъ슜
                 if pending_x is None or pending_pred is None:
-                    print("직전 질의/응답이 없습니다. /history로 확인 후 번호를 지정하세요.")
+                    print("吏곸쟾 吏덉쓽/?묐떟???놁뒿?덈떎. /history濡??뺤씤 ??踰덊샇瑜?吏?뺥븯?몄슂.")
                     continue
                 target_x = pending_x
                 target_pred = pending_pred
 
-            # 정답으로 간주 → 메모리 정책에 따라 스테이지/커밋
+            # ?뺣떟?쇰줈 媛꾩＜ ??硫붾え由??뺤콉???곕씪 ?ㅽ뀒?댁?/而ㅻ컠
             enc_avg, _ = encode_pair(tok, target_x, None, device=device)
             enc_avg = model.avg_embed(enc_avg).mean(dim=0).detach()
             key = enc_avg
             val = {"z_slow": state.z_for_q["bridge"].detach()}
             step = state.step
-            mem.add_with_policy(key, val, step, bench_callback=lambda: True)
-            print("[메모리] 정답 샘플 기록 시도")
+            intent_force = _intent_force_from_model(model)
+            mem.add_with_policy(key, val, step, meta={"luria_intent_force": intent_force}, bench_callback=lambda: True)
+            print("[硫붾え由? ?뺣떟 ?섑뵆 湲곕줉 ?쒕룄")
 
-            # 로그 기록
+            # 濡쒓렇 湲곕줉
             log_interaction(csv_path, state.step, target_x, target_pred.get("user_tokens", 0),
                           target_pred.get("text", ""), target_pred.get("response_tokens", 0),
                           target_pred.get("conf"), target_pred.get("entropy"), "yes_confirm")
@@ -697,7 +734,35 @@ def main():
             maybe_autosave()
             continue
 
-        # 일반 질의: 추론
+        # ?쇰컲 吏덉쓽: 異붾줎
+        # ORT/QNN engine commands
+        if s.lower().startswith("/lora_npz") and ort_engine is not None:
+            parts = s.split(maxsplit=1)
+            if len(parts) < 2:
+                print("Usage: /lora_npz path/to/params.npz")
+                continue
+            path = parts[1].strip().strip('"')
+            try:
+                import numpy as np
+                data = np.load(path)
+                A = data.get("adapter_A"); B = data.get("adapter_B")
+                gamma = data.get("film_gamma"); beta = data.get("film_beta")
+                if A is None and B is None and gamma is None and beta is None:
+                    print("No adapter_A/B or film_gamma/beta found in npz.")
+                else:
+                    ort_engine.swap_adapters(A=A, B=B, gamma=gamma, beta=beta)
+                    print(f"[engine] adapters swapped from {os.path.basename(path)}")
+            except Exception as e:
+                print(f"[engine] load failed: {e}")
+            continue
+
+        if s.lower() == "/hot_swap" and ort_engine is not None:
+            try:
+                ort_engine.hot_swap()
+                print("[engine] hot swapped and warmed up.")
+            except Exception as e:
+                print(f"[engine] hot swap failed: {e}")
+            continue
         pending_x = s
         gen_cfg = {
             "temperature": args.temperature,
@@ -710,25 +775,26 @@ def main():
             "abstain_conf_min": args.abstain_conf_min,
             "abstain_ent_max": args.abstain_ent_max,
             "abstain_message": args.abstain_message,
+            "ort_engine": ort_engine,
         }
         out = predict(model, tok, pending_x, state, device, gen_cfg)
         pending_pred = out
 
-        # 현재 히스토리 번호 (최근 20개 기준)
+        # ?꾩옱 ?덉뒪?좊- 踰덊샇 (理쒓렐 20媛?湲곗?)
         hist_num = len(state.history) + 1
-        recent_start = max(1, hist_num - 19)  # 최근 20개 범위의 시작 번호
-        display_num = hist_num - recent_start + 1  # 표시할 번호 (1-20)
+        recent_start = max(1, hist_num - 19)  # 理쒓렐 20媛?踰붿쐞???쒖옉 踰덊샇
+        display_num = hist_num - recent_start + 1  # ?쒖떆??踰덊샇 (1-20)
 
-        print(f"[{display_num}] 루리아> {out['text']}")
-        print(f"(토큰: 입력={out.get('user_tokens')}, 출력={out.get('response_tokens')}, "
+        print(f"[{display_num}] 猷⑤-?? {out['text']}")
+        print(f"(?좏겙: ?낅젰={out.get('user_tokens')}, 異쒕젰={out.get('response_tokens')}, "
               f"conf={f3(out.get('conf'))}, ent={f3(out.get('entropy'))})")
 
-        # 로그 기록
+        # 濡쒓렇 湲곕줉
         log_interaction(csv_path, state.step, pending_x, out.get("user_tokens", 0),
                       out.get("text", ""), out.get("response_tokens", 0),
                       out.get("conf"), out.get("entropy"), "predict")
 
-        # 히스토리에 추가
+        # ?덉뒪?좊-??異붽?
         state.history.append(HistoryItem(
             step=state.step,
             user_input=pending_x,
@@ -741,8 +807,12 @@ def main():
 
         state.step += 1
 
-        # 오토세이브
+        # ?ㅽ넗?몄씠釉?
         maybe_autosave()
 
 if __name__ == "__main__":
     main()
+
+
+
+

@@ -154,7 +154,7 @@ def main():
         num_langs=args.num_langs,
     ).to(device)
 
-    mem = CompressedMemory(max_items=8192, device=device)
+    mem = CompressedMemory(max_items=32000, device=device)
 
     def avg_embed(X: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():

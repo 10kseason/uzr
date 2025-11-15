@@ -159,9 +159,12 @@ def main():
         num_langs=args.num_langs,
     ).to(device)
 
-    mem = CompressedMemory(max_items=8192, device=device)
+    mem = CompressedMemory(max_items=32000, device=device)
 
     def avg_embed(X: torch.Tensor) -> torch.Tensor:
+        with torch.no_grad():
+            h = model.encoder(X)
+            return h.mean(dim=1)
     # ---- Generalization helpers (language-agnostic semantic space) ----
     _CONCEPT_VOCAB = 65536
     _concept_table = torch.nn.Embedding(_CONCEPT_VOCAB, args.sem_dim, device=device)

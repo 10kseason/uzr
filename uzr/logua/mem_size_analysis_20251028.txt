@@ -1,0 +1,83 @@
+메모리(mem_size) 분석 노트 — 2025-10-28 (v0.1)
+
+데이터 출처
+- writes.csv: logua/writes.csv
+- 요약 CSV: logua/20251028_124956_train3_s6_t15000.csv
+
+핵심 결론
+- 이번 t15000 러닝에서 mem_size(커밋된 항목 수)는 0→2까지만 증가했고, 이후 15000 스텝까지 고정됨.
+- 주요 원인: 초반 웜업 보류 이후에도 커밋 시도 빈도가 낮고(게이트), 시도된 쓰기 다수가 near-merge로 기존 항목에 흡수됨. stage(스테이징)는 많지만 promote가 충분하지 않아 실제 mem_size 증가로 이어지지 않음. 레이트리밋(rate_limited)은 거의 영향 없음.
+
+writes.csv 개요
+- 총 이벤트: 29,591
+- action 분포: merge 17,187 | stage 8,714 | promote 3,403 | defer 218 | commit 69 | skip 0 | rollback 0 | shadow_decay 0
+- reason 상위: near_merge 12,093 | staged 8,714 | near_merge_k3 5,094 | shadow_promote 3,403 | warmup 213 | add 69 | rate_limited 5
+- 커밋 구간: 첫 commit step=250, 마지막 commit step=1240 (초반 이후 커밋 희소)
+- 레이트리밋: rate_limited 사유 5회(매우 드뭄)
+- mem_size 스냅샷(파일 전체 집계): min 0 | max 3,466 | last 0
+  * 주: writes.csv는 여러 세션/구간 누적일 수 있어 마지막 0은 다른 러닝의 초기화 영향일 가능성. t15000 러닝 스코프는 아래 요약 CSV 기준으로 판단 권장.
+
+추가 파생 지표(writes.csv 기반)
+- commit 상위 100-step 버킷: [400:12], [300:11], [700:10], [500:9], [800:6], [200:6], [600:6], [900:5], [1000:3], [1200:1]
+- commit이 발생한 고유 step 수: 68 (총 commit 69와 근접)
+- stage→promote 비율(거시적): promote 3,403 / stage 8,714 ≈ 0.3905
+- merge 내 세부 비중: near_merge 70.36%, near_merge_k3 29.64% (merge 총 17,187 기준)
+
+t15000 요약 CSV 개요
+- 행 수: 15,000
+- mem_size 진행: step 100=0 | 500=1 | 1000=2 | 5000=2 | 10000=2 | 15000=2
+- mem_size 증가 이벤트: 2회 (총 증가량 2)
+- 평균 지표(전 구간): conf_mean≈0.5978 | ent_mean≈1.7282 | coverage≈0.00187 | abstain_ratio≈0.99813
+- 마지막 행(15000): loss=2.9429 | ema=1.8405 | ent_mean=3.2374 | coverage=0 | mem_size=2
+
+진단 요약
+- 웜업 보류(warmup 213회) 후에도 커밋 게이트가 보수적으로 작동하여 커밋 시도 빈도 자체가 낮음(커밋은 250~1240 구간 집중, 이후 사실상 없음).
+- near-merge 우세(≈70%)로 신규 추가 없이 기존 항목 업데이트(merge)가 다수. stage는 많지만 promote가 충분히 일어나지 않아 mem_size 증가로 연결되지 않음.
+- rate_limited는 5회로 영향 미미.
+
+다음 단계(업데이트 계획)
+- 시간축 분석 심화: stage/commit/promote의 100-step 이동창 추이와 상관관계(커밋 소멸 구간 정확히 특정).
+- 게이팅 진단: 커밋 게이트(퍼센타일/score) 통과율 추정, stage→promote 전환 효율 변화(버킷별 promote/stage).
+- mem_size 증가 이벤트 특성: 증가 직전에 어떤 action/reason 패턴이 선행되는지 사례 점검.
+
+메모
+- mem_size는 커밋된 항목 수(len(self.items))이며 shadow_bank(스테이징)는 포함하지 않음. stage가 많아도 promote되지 않으면 mem_size는 늘지 않음.
+
+흥미로운 관찰(추가)
+- commit이 집중된 초반 구간(250~1240)에서 stage→promote 전환율이 전체 평균보다 낮음
+  * 해당 구간 집계: merge=1404, stage=393, promote=100, commit=69, defer=5 → promote/stage≈0.254 (< 전체≈0.391)
+  * 이후 구간(상위 stage 버킷들)에서는 전환율이 0.33~0.37로 비교적 안정적(부록 A)
+- merge 편중은 학습 스크립트 정책과 부합
+  * train_meta_3brains.py에서 near_merge_thr=0.10로 매우 관대하게 설정되어 k=3 평균 유사도 0.10만 넘어도 병합됨 → 신규 증가보다 병합 로그가 압도적으로 많음(관측치: merge 17,187)
+- rate_limited가 매우 드뭄(5회)
+  * 쓰기 예산(레이트리밋)보다 상위 게이트(웜업/유사도/커밋 게이트)가 먼저 쓰기 시도를 억제하는 패턴
+- t15000 기준 coverage≈0.19%로 극저
+  * 거의 항상 abstain하는 러닝 동작. 마지막 스텝 ent_mean=3.2374(전구간 평균 1.728)로 상승했지만 커버리지는 0 → 불확실성이 커져도 커밋/수용으로 이어지지 않음
+- writes.csv와 t15000의 mem_size 불일치 주의
+  * writes.csv에는 promote 3,403(≤15000 step 범위에서도 다수)이지만 t15000 요약에서는 mem_size=2로 고정 → 로그가 서로 다른 세션/메모리 인스턴스/복사 타이밍이 섞였을 가능성. 교차해석 시 범위 정합성 확인 필요
+
+부록 A — 버킷별 stage→promote 전환율(상위 stage 버킷 12개)
+- 13500: stage=73, promote=24, ratio=0.3288
+- 9800: stage=73, promote=24, ratio=0.3288
+- 11600: stage=72, promote=24, ratio=0.3333
+- 6500: stage=71, promote=26, ratio=0.3662
+- 2900: stage=70, promote=24, ratio=0.3429
+- 12400: stage=70, promote=24, ratio=0.3429
+- 1200: stage=69, promote=25, ratio=0.3623
+- 5000: stage=69, promote=24, ratio=0.3478
+- 4200: stage=68, promote=24, ratio=0.3529
+- 11900: stage=68, promote=24, ratio=0.3529
+- 3500: stage=68, promote=24, ratio=0.3529
+- 8600: stage=67, promote=25, ratio=0.3731
+
+부록 B — 커밋 분포 상위 100-step 버킷(최대 10)
+- 400: commits=12
+- 300: commits=11
+- 700: commits=10
+- 500: commits=9
+- 800: commits=6
+- 200: commits=6
+- 600: commits=6
+- 900: commits=5
+- 1000: commits=3
+- 1200: commits=1

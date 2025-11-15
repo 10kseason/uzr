@@ -6,6 +6,83 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.checkpoint import checkpoint as _ckpt
+
+# ---- Codebook + Transition helpers ----
+class CodebookEncoder(nn.Module):
+    """codebook token ids -> pooled embedding.
+
+    Supports mean/max/attention pooling over a sequence of token ids.
+    """
+    def __init__(self, vocab_size: int, emb_dim: int, pool: str = "mean"):
+        super().__init__()
+        self.emb = nn.Embedding(vocab_size, emb_dim)
+        assert pool in ("mean", "max", "attn")
+        self.pool = pool
+        if pool == "attn":
+            self.q = nn.Linear(emb_dim, emb_dim)
+
+    def forward(self, token_ids: torch.Tensor) -> torch.Tensor:
+        # token_ids: [B, L]
+        E = self.emb(token_ids)  # [B, L, E]
+        if self.pool == "mean":
+            return E.mean(dim=1)
+        if self.pool == "max":
+            return E.max(dim=1).values
+        # attention pooling
+        q = self.q(E.mean(dim=1)).unsqueeze(1)  # [B,1,E]
+        attn = torch.softmax((q * E).sum(dim=-1), dim=1)  # [B,L]
+        return (attn.unsqueeze(-1) * E).sum(dim=1)  # [B,E]
+
+
+class MMFuse(nn.Module):
+    """concat(norm(z), u, cb_enc) -> fused representation."""
+    def __init__(self, z_dim: int, u_dim: int, cb_dim: int, fused_dim: int):
+        super().__init__()
+        in_dim = z_dim + u_dim + cb_dim
+        self.net = nn.Sequential(
+            nn.LayerNorm(in_dim),
+            nn.Linear(in_dim, fused_dim),
+            nn.ReLU(),
+        )
+
+    def forward(self, z_norm: torch.Tensor, u: torch.Tensor, cb: torch.Tensor) -> torch.Tensor:
+        x = torch.cat([z_norm, u, cb], dim=-1)
+        return self.net(x)
+
+
+class TransHeadZ(nn.Module):
+    def __init__(self, in_dim: int, z_dim: int, hidden_mult: int = 2, spectral: bool = True):
+        super().__init__()
+        H = max(z_dim * hidden_mult, 32)
+        def Lin(a, b):
+            base = nn.Linear(a, b)
+            return nn.utils.parametrizations.spectral_norm(base) if spectral else base
+        self.net = nn.Sequential(
+            nn.LayerNorm(in_dim),
+            Lin(in_dim, H), nn.ReLU(),
+            Lin(H, z_dim),
+        )
+
+    def forward(self, fused: torch.Tensor) -> torch.Tensor:
+        return self.net(fused)  # Δz_pred
+
+
+class TransHeadCB(nn.Module):
+    """next codebook distribution (BOW) or next-token logits."""
+    def __init__(self, in_dim: int, vocab_size: int, mode: str = "bag", hidden_mult: int = 2):
+        super().__init__()
+        H = max(in_dim * hidden_mult, 64)
+        self.mode = mode  # "bag": multi-label (BCE), "lm": next-token
+        self.proj = nn.Sequential(
+            nn.LayerNorm(in_dim),
+            nn.Linear(in_dim, H), nn.ReLU(),
+            nn.Linear(H, vocab_size),
+        )
+
+    def forward(self, fused: torch.Tensor) -> torch.Tensor:
+        logits = self.proj(fused)
+        return logits
 
 # Optional meta-cognition utilities (SelfEval, entropy, brier)
 try:
@@ -157,30 +234,98 @@ class TinyEncoder(nn.Module):
         layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=n_head, dim_feedforward=d_model*4, batch_first=True)
         self.enc = nn.TransformerEncoder(layer, num_layers=n_layer)
         self.max_len = max_len
+        # Toggle via environment variable set by the training script
+        # UZR_GRADIENT_CHECKPOINTING in {"1","true","on"} enables layer-wise checkpointing
+        try:
+            _env_gc = str(os.environ.get("UZR_GRADIENT_CHECKPOINTING", "0")).strip().lower()
+        except Exception:
+            _env_gc = "0"
+        self.use_checkpoint = _env_gc in {"1", "true", "on"}
 
     def forward(self, x):
         # x: [B, T]
         B, T = x.shape
         pos = torch.arange(T, device=x.device).unsqueeze(0).expand(B, T)
         h = self.tok(x) + self.pos(pos)
-        h = self.enc(h)
+        # Use gradient checkpointing only when explicitly enabled, in training, and when grads are active
+        use_ckpt = bool(self.use_checkpoint and self.training and h.requires_grad)
+        if not use_ckpt:
+            h = self.enc(h)
+            return h  # [B, T, D]
+
+        # Layer-wise checkpointing through TransformerEncoder layers
+        # Guard for implementations without public .layers (older PyTorch) — fallback to regular path
+        layers = getattr(self.enc, "layers", None)
+        if layers is None:
+            h = self.enc(h)
+            return h
+
+        for lyr in layers:
+            # Wrap single-arg call for checkpoint
+            h = _ckpt(lambda inp: lyr(inp), h)
+        norm = getattr(self.enc, "norm", None)
+        if norm is not None:
+            h = norm(h)
         return h  # [B, T, D]
+
+
+class MultiTimeScaleAdapter(nn.Module):
+    """Self-referential gate with fast (learned) and slow (EMA) components."""
+
+    def __init__(self, dim: int, slow_momentum: float = 0.995):
+        super().__init__()
+        self.dim = int(dim)
+        self.slow_momentum = float(slow_momentum)
+        if self.dim > 0:
+            self.fast = nn.Parameter(torch.zeros(self.dim))
+            self.register_buffer("slow", torch.zeros(self.dim))
+        else:
+            self.fast = None
+            self.register_buffer("slow", torch.zeros(1))
+
+    def forward(self) -> torch.Tensor:
+        if self.dim == 0 or self.fast is None:
+            return self.slow.new_zeros(1)
+        return torch.tanh(self.fast + self.slow)
+
+    @torch.no_grad()
+    def update_slow(self):
+        if self.dim == 0 or self.fast is None:
+            return
+        momentum = self.slow_momentum
+        self.slow.mul_(momentum).add_((1.0 - momentum) * self.fast.detach())
 
 # ---- Universal Z-Rule Runner f_theta ----
 class UZRModel(nn.Module):
     def __init__(self, vocab_size: int, d_model: int = 256, z_dim: int = 128, n_head: int = 4, n_layer: int = 4, max_len: int = 128,
-                 z_think_dim: int = 64, z_lang_dim: int = 32, num_langs: int = 4, identity_self_dim: int = 2, memory=None,
+                 z_think_dim: int = 64, z_lang_dim: int = 32, num_langs: int = 4, identity_self_dim: int = 32,
+                 identity_intent_dim: Optional[int] = 16, memory=None,
                  z_slow_lang_dim: int = 96, z_slow_logic_dim: int = 96, z_bridge_dim: int = 64,
-                 use_self_eval: bool = True):
+                 use_self_eval: bool = True,
+                 # Transition (optional; initialized later via init_transition_module if needed)
+                 ):
         super().__init__()
         self.encoder = TinyEncoder(vocab_size, d_model, n_head, n_layer, max_len)
         self.film = FiLM(z_dim, d_model)
         self.readout = nn.Linear(d_model, vocab_size)  # token-level logits
+        # Tokenizer compatibility (PAD/BOS/EOS)
+        self.pad_token_id: int = 0
+        self.bos_token_id: int = 1
+        self.eos_token_id: int = 2
         self.z_dim = z_dim
         self.z_think_dim = z_think_dim
         self.z_lang_dim = z_lang_dim
         self.num_langs = num_langs
         self.identity_self_dim = identity_self_dim
+        if identity_intent_dim is None:
+            # Default intent space is half the identity (capped at 16) when unspecified.
+            desired_intent = min(16, max(0, identity_self_dim // 2))
+        else:
+            desired_intent = int(max(0, identity_intent_dim))
+        if desired_intent >= identity_self_dim:
+            desired_intent = max(0, identity_self_dim - 1)
+        self.identity_intent_dim = desired_intent
+        self.identity_core_dim = self.identity_self_dim - self.identity_intent_dim
 
         # 3brains dimensions
         self.z_slow_lang_dim = z_slow_lang_dim
@@ -191,11 +336,39 @@ class UZRModel(nn.Module):
 
         # Learned identity embedding for self-awareness (e.g., "루리아")
         self.identity_self = nn.Parameter(torch.randn(identity_self_dim) * 0.02)
+        self.identity_self.requires_grad_(False)
+        if self.identity_intent_dim > 0:
+            self.intent_norm = nn.LayerNorm(self.identity_intent_dim)
+            self.intent_state = nn.Sequential(
+                nn.Linear(self.identity_intent_dim, self.identity_intent_dim),
+                nn.Tanh(),
+            )
+            self.intent_rule_proj = nn.Linear(self.identity_intent_dim, z_dim)
+            self.intent_think_proj = nn.Linear(self.identity_intent_dim, z_think_dim)
+            self.identity_abstain_head = nn.Linear(self.identity_intent_dim, 1)
+            self.identity_toggle_head = nn.Linear(self.identity_intent_dim, 1)
+            self._last_intent_bias = 0.0
+            self._last_intent_toggle = 0.0
+        else:
+            self.intent_norm = None
+            self.intent_state = None
+            self.intent_rule_proj = None
+            self.intent_think_proj = None
+            self.identity_abstain_head = None
+            self.identity_toggle_head = None
+            self._last_intent_bias = 0.0
+            self._last_intent_toggle = 0.0
 
         # Updated fuse dimension to include identity_self interactions
         # Original: z_dim + z_think_dim + z_lang_dim + z_dim + z_dim + z_think_dim
-        # Add: identity_self_dim + z_dim (rule*identity) + z_think_dim (think*identity)
-        fuse_dim = z_dim + z_think_dim + z_lang_dim + z_dim + z_dim + z_think_dim + identity_self_dim + z_dim + z_think_dim
+        # Add: identity_core (remaining dims) + intent_state + rule*identity + think*identity + intent-modulated views
+        fuse_dim = (
+            z_dim + z_think_dim + z_lang_dim + z_dim + z_dim + z_think_dim
+            + max(0, self.identity_core_dim)
+            + z_dim + z_think_dim
+        )
+        if self.identity_intent_dim > 0:
+            fuse_dim += self.identity_intent_dim + z_dim + z_think_dim
         self.fuse_proj = nn.Linear(fuse_dim, z_dim)
 
         # 3brains fuse projection: combines weighted sum of all brains + bridge context
@@ -205,6 +378,11 @@ class UZRModel(nn.Module):
 
         # learned z initializer for the rule channel
         self.z0 = nn.Parameter(torch.zeros(z_dim))
+
+        # Self-referential adapters (fast vs slow timescales)
+        self.self_ref_rule = MultiTimeScaleAdapter(z_dim)
+        self.self_ref_think = MultiTimeScaleAdapter(z_think_dim)
+        self.self_ref_fused = MultiTimeScaleAdapter(z_dim)
 
         # Optional memory reference for real-time state tracking
         self.memory = memory
@@ -226,6 +404,15 @@ class UZRModel(nn.Module):
 
         # Register 3brains fusion weights as buffer (avoid recreating every forward pass)
         self.register_buffer("brains_weights", torch.tensor([0.4, 0.4, 0.2], dtype=torch.float32))
+
+        # Optional external inference engine (ORT/QNN). Training 경로에는 영향 없음.
+        self._npu_engine = None
+
+        # Luria Brains: Supervisor (Nested Learning meta-controller)
+        try:
+            self.supervisor = LuriaSupervisor(d_model, max_steps=25)
+        except Exception:
+            self.supervisor = None
 
     def init_z(self, batch_size: int = 1):
         return self.z0.unsqueeze(0).expand(batch_size, -1).clone().detach()
@@ -264,15 +451,75 @@ class UZRModel(nn.Module):
             conf = self.self_eval(h.mean(1))  # [B, D] -> [B]
             return conf
 
+    @torch.no_grad()
+    def unconscious_loop(self, x: torch.Tensor, rounds: int = 3) -> dict:
+        """Run a brief, silent inner loop before answering.
+
+        Copya.txt asks for a non-verbal "무의식 루프" (latency) where the
+        model reflects without emitting tokens. Here we implement a light-weight
+        version that collects meta-signals and nudges self-referential adapters
+        using only their slow EMA path (no gradient / no parameter updates).
+
+        Args:
+            x: input tokens [B, T]
+            rounds: number of reflection passes (small integer)
+
+        Returns:
+            telemetry dict with simple aggregates for potential logging.
+        """
+        rounds = int(max(1, min(16, rounds)))
+        conf_hist = []
+        ent_hist = []
+        for _ in range(rounds):
+            # encode once per round to observe stability
+            h = self.encoder(x)
+            logits = self.readout(h)
+            # entropy per sample
+            ent = self.sequence_entropy(logits)
+            ent_hist.append(float(ent.mean().item()))
+            # confidence if available
+            c = self.confidence(x)
+            if c is not None:
+                conf_hist.append(float(c.mean().item()))
+            # very small EMA nudge on self-referential slow buffers
+            try:
+                if self.self_ref_rule is not None:
+                    self.self_ref_rule.update_slow()
+                if self.self_ref_think is not None:
+                    self.self_ref_think.update_slow()
+                if self.self_ref_fused is not None:
+                    self.self_ref_fused.update_slow()
+            except Exception:
+                pass
+        tel = {
+            "rounds": rounds,
+            "conf_mean": (sum(conf_hist) / len(conf_hist)) if conf_hist else None,
+            "ent_mean": (sum(ent_hist) / len(ent_hist)) if ent_hist else None,
+        }
+        return tel
+
     @staticmethod
     def sequence_entropy(logits: torch.Tensor, topk: Optional[int] = None) -> torch.Tensor:
         """Mean entropy per sample from token logits."""
         return _seq_ent(logits, topk=topk)
 
-    @staticmethod
-    def brier_from_logits_conf(logits: torch.Tensor, targets: torch.Tensor, conf: torch.Tensor, ignore_index: int = 0) -> torch.Tensor:
-        """Brier loss between scalar conf and token-accuracy proxy."""
+    def brier_from_logits_conf(self, logits: torch.Tensor, targets: torch.Tensor, conf: torch.Tensor, ignore_index: Optional[int] = None) -> torch.Tensor:
+        """Brier loss between scalar conf and token-accuracy proxy.
+
+        If ignore_index is not provided, use the model's pad_token_id.
+        """
+        if ignore_index is None:
+            ignore_index = int(getattr(self, 'pad_token_id', 0))
         return _brier_from_conf(logits, targets, conf, ignore_index=ignore_index)
+
+    def set_tokenizer_specials(self, pad_id: Optional[int] = None, bos_id: Optional[int] = None, eos_id: Optional[int] = None) -> None:
+        """Configure special token ids for loss masking and metrics."""
+        if pad_id is not None:
+            self.pad_token_id = int(pad_id)
+        if bos_id is not None:
+            self.bos_token_id = int(bos_id)
+        if eos_id is not None:
+            self.eos_token_id = int(eos_id)
 
     def get_z_from_memory(self, x: torch.Tensor, z_init: Optional[torch.Tensor] = None,
                           topk: Optional[int] = None, blend: float = 0.5) -> Optional[torch.Tensor]:
@@ -310,9 +557,14 @@ class UZRModel(nn.Module):
             use_predictor=True,
         )
 
-        # Normalize before returning
+        # Normalize and ensure z matches model z_dim before returning
         if z is not None:
             z = F.normalize(z, p=2, dim=-1)
+            try:
+                if z.size(-1) != self.z_dim:
+                    z = self._pad_or_trim(z, self.z_dim)
+            except Exception:
+                pass
 
         return z
 
@@ -391,6 +643,57 @@ class UZRModel(nn.Module):
         pad = vec.new_zeros(*pad_shape)
         return torch.cat([vec, pad], dim=-1)
 
+    def _split_identity(self, batch_size: int) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        identity = self.identity_self.unsqueeze(0).expand(batch_size, -1)
+        if self.identity_intent_dim > 0:
+            if self.identity_core_dim > 0:
+                identity_core = identity[..., : self.identity_core_dim]
+            else:
+                identity_core = None
+            identity_intent = identity[..., -self.identity_intent_dim :]
+        else:
+            identity_core = identity
+            identity_intent = None
+        return identity_core, identity_intent
+
+    def _compute_intent_features(self, identity_intent: torch.Tensor):
+        if identity_intent is None or self.identity_intent_dim <= 0:
+            return None, None, None
+        intent_normed = self.intent_norm(identity_intent)
+        intent_state = self.intent_state(intent_normed)
+        bias = torch.tanh(self.identity_abstain_head(intent_state))
+        toggle = torch.tanh(self.identity_toggle_head(intent_state))
+        self._last_intent_bias = float(bias.mean().detach().cpu())
+        self._last_intent_toggle = float(toggle.mean().detach().cpu())
+        return intent_state, bias, toggle
+
+    @torch.no_grad()
+    def identity_intent_control(self) -> Tuple[float, float]:
+        """Return (bias, toggle) derived from identity intent slice."""
+        if self.identity_intent_dim <= 0:
+            return 0.0, 0.0
+        core = self.identity_self
+        identity_intent = core[-self.identity_intent_dim :].unsqueeze(0)
+        _, bias, toggle = self._compute_intent_features(identity_intent)
+        if bias is None or toggle is None:
+            return 0.0, 0.0
+        return (
+            float(bias.mean().detach().cpu()),
+            float(toggle.mean().detach().cpu()),
+        )
+
+    @torch.no_grad()
+    def set_identity_self(self, new_identity: torch.Tensor) -> None:
+        if new_identity.dim() != 1 or new_identity.size(0) != self.identity_self_dim:
+            raise ValueError("new_identity must be 1-D and match identity_self_dim")
+        self.identity_self.copy_(new_identity)
+
+    @torch.no_grad()
+    def update_self_referential(self):
+        for adapter in (self.self_ref_rule, self.self_ref_think, self.self_ref_fused):
+            if adapter is not None:
+                adapter.update_slow()
+
     def _fuse_z(self, z_rule: torch.Tensor, z_think: torch.Tensor, lang_id):
         if z_rule.dim() == 1:
             z_rule = z_rule.unsqueeze(0)
@@ -398,6 +701,17 @@ class UZRModel(nn.Module):
             z_think = z_think.unsqueeze(0)
 
         batch_size = z_rule.size(0)
+
+        # Safety: ensure expected channel dimensions
+        try:
+            z_rule = self._pad_or_trim(z_rule, self.z_dim)
+            z_think = self._pad_or_trim(z_think, self.z_think_dim)
+        except Exception:
+            pass
+        if self.self_ref_rule.fast is not None:
+            z_rule = z_rule * (1 + self.self_ref_rule().unsqueeze(0))
+        if self.self_ref_think.fast is not None:
+            z_think = z_think * (1 + self.self_ref_think().unsqueeze(0))
 
         lang_tensor = torch.as_tensor(lang_id, device=z_rule.device, dtype=torch.long)
         if lang_tensor.dim() == 0:
@@ -416,17 +730,40 @@ class UZRModel(nn.Module):
         rule_think = z_rule * think_for_rule
         think_lang = z_think * lang_for_think
 
-        # Add identity_self interactions
-        identity = self.identity_self.unsqueeze(0).expand(batch_size, -1)  # [B, identity_self_dim]
-        identity_for_rule = self._pad_or_trim(identity, z_rule.size(-1))
-        identity_for_think = self._pad_or_trim(identity, z_think.size(-1))
+        # Add identity_self interactions (core + intent split)
+        identity_core, identity_intent = self._split_identity(batch_size)
+        if identity_core is not None and identity_core.size(-1) > 0:
+            identity_for_rule = self._pad_or_trim(identity_core, z_rule.size(-1))
+            identity_for_think = self._pad_or_trim(identity_core, z_think.size(-1))
+            rule_identity = z_rule * identity_for_rule  # [B, z_dim]
+            think_identity = z_think * identity_for_think  # [B, z_think_dim]
+        else:
+            identity_for_rule = z_rule.new_zeros(z_rule.size())
+            identity_for_think = z_think.new_zeros(z_think.size())
+            rule_identity = identity_for_rule
+            think_identity = identity_for_think
 
-        rule_identity = z_rule * identity_for_rule  # [B, z_dim]
-        think_identity = z_think * identity_for_think  # [B, z_think_dim]
+        intent_state = None
+        intent_rule_gate = None
+        intent_think_gate = None
+        if identity_intent is not None:
+            intent_state, _, _ = self._compute_intent_features(identity_intent)
+            intent_rule_gate = torch.tanh(self.intent_rule_proj(intent_state))
+            intent_think_gate = torch.tanh(self.intent_think_proj(intent_state))
 
-        fuse = torch.cat([z_rule, z_think, lang_e, rule_lang, rule_think, think_lang,
-                         identity, rule_identity, think_identity], dim=-1)
+        fuse_parts = [z_rule, z_think, lang_e, rule_lang, rule_think, think_lang]
+        if identity_core is not None and identity_core.size(-1) > 0:
+            fuse_parts.append(identity_core)
+        fuse_parts.extend([rule_identity, think_identity])
+        if intent_state is not None:
+            rule_intent = z_rule * intent_rule_gate
+            think_intent = z_think * intent_think_gate
+            fuse_parts.extend([intent_state, rule_intent, think_intent])
+
+        fuse = torch.cat(fuse_parts, dim=-1)
         z_fused = self.fuse_proj(fuse)
+        if self.self_ref_fused.fast is not None:
+            z_fused = z_fused * (1 + self.self_ref_fused().unsqueeze(0))
         return z_fused
 
     def _fuse_z_3brains(self, z_slow_lang: torch.Tensor, z_slow_logic: torch.Tensor, z_bridge: torch.Tensor):
@@ -452,8 +789,19 @@ class UZRModel(nn.Module):
         weights = torch.softmax(self.brains_weights, dim=0)
         fuse = z_lang_padded * weights[0] + z_logic_padded * weights[1] + z_bridge_padded * weights[2]
 
+        identity_core, identity_intent = self._split_identity(z_bridge.size(0))
+        if identity_core is not None and identity_core.size(-1) > 0:
+            identity_pad = self._pad_or_trim(identity_core, fuse.size(-1))
+            fuse = fuse + identity_pad
+        if identity_intent is not None:
+            intent_state, _, _ = self._compute_intent_features(identity_intent)
+            intent_bridge = self._pad_or_trim(intent_state, z_bridge.size(-1))
+            z_bridge = z_bridge + intent_bridge
+
         # Concatenate with original bridge for additional context
         z_fused = self.fuse_proj_3brains(torch.cat([fuse, z_bridge], dim=-1))
+        if self.self_ref_fused.fast is not None:
+            z_fused = z_fused * (1 + self.self_ref_fused().unsqueeze(0))
         return z_fused
 
     def forward(self, x, z):
@@ -491,6 +839,146 @@ class UZRModel(nn.Module):
         logits = self.readout(h)
         return logits
 
+    # ---- External inference (ORT/QNN) optional helpers ----
+    def set_npu_engine(self, engine) -> None:
+        """외부 추론 엔진(예: ORT/QNN) 등록. 훈련 경로에는 영향을 주지 않습니다."""
+        self._npu_engine = engine
+
+    def clear_npu_engine(self) -> None:
+        """외부 추론 엔진 등록 해제."""
+        self._npu_engine = None
+
+    def npu_run_logits(self, input_ids) -> Optional[torch.Tensor]:
+        """등록된 NPU 엔진이 있으면 logits 텐서를 반환, 없거나 실패 시 None.
+
+        엔진은 ONNX Runtime 세션을 가정합니다. 입력은 numpy 배열이어야 하므로 내부에서 변환합니다.
+        """
+        if self._npu_engine is None:
+            return None
+        try:
+            out = self._npu_engine.run(input_ids=input_ids.detach().cpu().numpy())
+            if "logits" in out:
+                logits_np = out["logits"]
+            else:
+                logits_np = list(out.values())[0]
+            logits = torch.from_numpy(logits_np).to(input_ids.device)
+            return logits
+        except Exception:
+            return None
+
+    # ---- Transition (multimodal) module support ----
+    def init_transition_module(
+        self,
+        z_bridge_dim: int,
+        u_dim: int,
+        cb_vocab: int,
+        cb_emb: int = 64,
+        fused_dim: int = 256,
+        lam_trans: float = 8e-4,
+        lam_cos: float = 4e-4,
+        lam_roll: float = 4e-4,
+        lam_jac: float = 1e-5,
+        lam_cb: float = 8e-4,
+        lam_align: float = 4e-4,
+    ) -> None:
+        """Initialize multimodal transition heads and statistics buffers.
+
+        This is optional and can be called after model construction to avoid changing
+        the public constructor signature across training scripts.
+        """
+        # EMA stats for z normalization
+        if not hasattr(self, "ema_mean"):
+            self.register_buffer("ema_mean", torch.zeros(z_bridge_dim))
+            self.register_buffer("ema_std", torch.ones(z_bridge_dim))
+            self.register_buffer("ema_count", torch.tensor(0.0))
+        else:
+            # Resize if dimensions changed
+            if self.ema_mean.numel() != z_bridge_dim:
+                self.ema_mean = torch.zeros(z_bridge_dim, device=self.ema_mean.device)
+                self.ema_std = torch.ones(z_bridge_dim, device=self.ema_std.device)
+                self.ema_count = torch.tensor(0.0, device=self.ema_count.device)
+
+        # Modules
+        self.cb_enc = CodebookEncoder(cb_vocab, cb_emb, pool="mean")
+        self.fuse = MMFuse(z_bridge_dim, u_dim, cb_emb, fused_dim)
+        self.trans_z = TransHeadZ(fused_dim, z_bridge_dim, spectral=True)
+        self.trans_cb = TransHeadCB(fused_dim, cb_vocab, mode="bag")
+
+        # Lambda weights as buffers
+        for k, v in dict(
+            lam_trans=lam_trans,
+            lam_cos=lam_cos,
+            lam_roll=lam_roll,
+            lam_jac=lam_jac,
+            lam_cb=lam_cb,
+            lam_align=lam_align,
+        ).items():
+            if hasattr(self, k):
+                # overwrite existing buffer value
+                getattr(self, k).data = torch.tensor(v, device=self.readout.weight.device)
+            else:
+                self.register_buffer(k, torch.tensor(v))
+
+        # For simple guards elsewhere
+        self._trans_u_dim = int(u_dim)
+        self._trans_cb_vocab = int(cb_vocab)
+
+    @torch.no_grad()
+    def update_ema_stats(self, z: torch.Tensor, alpha: float = 0.01) -> None:
+        """Update EMA statistics for bridge z normalization."""
+        if not hasattr(self, "ema_mean"):
+            return
+        if z.dim() == 1:
+            z = z.unsqueeze(0)
+        if self.ema_count.item() == 0:
+            self.ema_mean.copy_(z.mean(0))
+            # Use population std (unbiased=False) to avoid DoF<=0 warnings when B=1
+            s = z.std(0, unbiased=False)
+            # Guard against non-finite values
+            s = torch.where(torch.isfinite(s), s, torch.zeros_like(s))
+            self.ema_std.copy_(s + 1e-5)
+            self.ema_count.fill_(1)
+            return
+        self.ema_mean.mul_(1 - alpha).add_(alpha * z.mean(0))
+        # Population std and finite guard during EMA updates as well
+        s = z.std(0, unbiased=False)
+        s = torch.where(torch.isfinite(s), s, torch.zeros_like(s))
+        self.ema_std.mul_(1 - alpha).add_(alpha * (s + 1e-5))
+
+    def norm_z(self, z: torch.Tensor) -> torch.Tensor:
+        """Normalize z with EMA stats if available."""
+        if not hasattr(self, "ema_mean"):
+            return z
+        return (z - self.ema_mean) / (self.ema_std + 1e-5)
+
+
+class LuriaSupervisor(nn.Module):
+    """
+    Nested Learning meta-controller: decides inner-loop steps, learning rate, and sparsity
+    based on the input’s embedding summary. This enables differentiable control signals
+    flowing from the outer loop to the inner thinking loop.
+    """
+
+    def __init__(self, d_model: int, max_steps: int = 25):
+        super().__init__()
+        self.max_steps = int(max(1, max_steps))
+        self.mlp = nn.Sequential(
+            nn.Linear(d_model, 128), nn.ReLU(),
+            nn.Linear(128, 3)  # [steps, eta, lambda]
+        )
+
+    def forward(self, h_avg: torch.Tensor):
+        # h_avg: [B, D]
+        out = self.mlp(h_avg)  # [B,3]
+        steps_logits = out[:, 0]
+        eta_logits = out[:, 1]
+        lam_logits = out[:, 2]
+        # Map to usable ranges with smooth squashing
+        steps = torch.clamp(torch.sigmoid(steps_logits) * self.max_steps, min=1.0, max=float(self.max_steps))
+        eta = torch.sigmoid(eta_logits) * 0.99 + 0.01   # [0.01, 1.0]
+        lam = torch.sigmoid(lam_logits) * 1e-2          # [0, 1e-2]
+        return steps, eta, lam
+
 # ---- Loss helpers ----
 def seq_ce_loss(logits, target, ignore_index=0):
     # logits: [B, T, V], target: [B, T]
@@ -511,4 +999,3 @@ def confidence_from_logits(logits, target, ignore_index=0):
         # squash to [0,1] approximately
         c = torch.sigmoid(c / 5.0)
         return c
-

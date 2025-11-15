@@ -2,6 +2,7 @@
 import argparse, os, random, csv, statistics, json
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 import torch
 from tqdm import trange
 
@@ -54,6 +55,17 @@ def seed_identity(mem, model, tok, device, identity="Luria"):
         key, val = make_sketch(emb, z0, meta={"identity": identity, "phrase": ph})
         mem.add(key, val, step=-1)
 
+def _intent_force_from_model(model):
+    try:
+        _, toggle = model.identity_intent_control()
+    except Exception:
+        return None
+    if toggle <= -0.5:
+        return False
+    if toggle >= 0.5:
+        return True
+    return None
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--device", default="cpu")
@@ -63,7 +75,7 @@ def main():
     ap.add_argument("--lam", type=float, default=1e-3)
     ap.add_argument("--alpha", type=float, default=0.5)
     ap.add_argument("--prox", type=float, default=5e-4)
-    ap.add_argument("--max_items", type=int, default=2048)
+    ap.add_argument("--max_items", type=int, default=32000)
     ap.add_argument("--summary_csv", default="infer_summary.csv")
     ap.add_argument("--summary_every", type=int, default=50)
     ap.add_argument("--summary_json", default="infer_summary.json")
@@ -83,7 +95,8 @@ def main():
         z_think_dim=cfg.get("z_think_dim", 64),
         z_lang_dim=cfg.get("z_lang_dim", 32),
         num_langs=cfg.get("num_langs", 4),
-        identity_self_dim=cfg.get("identity_self_dim", 2),
+        identity_self_dim=cfg.get("identity_self_dim", 32),
+        identity_intent_dim=cfg.get("identity_intent_dim"),
         z_slow_lang_dim=cfg.get("z_slow_lang_dim", 96),
         z_slow_logic_dim=cfg.get("z_slow_logic_dim", 96),
         z_bridge_dim=cfg.get("z_bridge_dim", 64),
@@ -219,7 +232,9 @@ def main():
             }
             sketch_key, sketch_val = make_sketch(enc_avg, z_slow, meta=meta)
             if hasattr(mem, "add_with_policy"):
-                mem.add_with_policy(sketch_key, sketch_val, step=t, meta=meta)
+                mem_meta = dict(meta)
+                mem_meta["luria_intent_force"] = _intent_force_from_model(model)
+                mem.add_with_policy(sketch_key, sketch_val, step=t, meta=mem_meta)
             else:
                 mem.add(sketch_key, sketch_val, step=t)
 

@@ -633,7 +633,8 @@ class CodebookManager:
         t_cfg: Optional[Dict] = None,
         v_cfg: Optional[Dict] = None,
         seed: int = 42,
+        commit_steps: int = 1000,
         device: str = "cpu",
     ) -> 'CodebookManager':
         """팩토리 메서드"""
-        return CodebookManager(d=d, t_cfg=t_cfg, v_cfg=v_cfg, seed=seed, device=device)
+        return CodebookManager(d=d, t_cfg=t_cfg, v_cfg=v_cfg, seed=seed, commit_steps=commit_steps, device=device)

@@ -40,6 +40,17 @@ def avg_embed(model: UZRModel, X: torch.Tensor) -> torch.Tensor:
         h = model.encoder(X)
         return h.mean(dim=1).mean(dim=0)
 
+def _intent_force_from_model(model: UZRModel) -> Optional[bool]:
+    try:
+        _, toggle = model.identity_intent_control()
+    except Exception:
+        return None
+    if toggle <= -0.5:
+        return False
+    if toggle >= 0.5:
+        return True
+    return None
+
 
 def encode_str(tok: ByteTokenizer, s: str, device: torch.device) -> torch.Tensor:
     return torch.stack([tok.encode(s)], dim=0).to(device)
@@ -506,7 +517,7 @@ def main():
     ap.add_argument("--lam_think", type=float, default=None, help="L1 penalty for z_thinking (defaults to --lam)")
     ap.add_argument("--alpha", type=float, default=0.3)
     ap.add_argument("--prox", type=float, default=1e-3)
-    ap.add_argument("--max_items", type=int, default=20000)
+    ap.add_argument("--max_items", type=int, default=32000)
     ap.add_argument("--summary_csv", default="infer_summary.csv")
     ap.add_argument("--summary_every", type=int, default=50)
     ap.add_argument("--summary_json", default="infer_summary.json")
@@ -532,7 +543,8 @@ def main():
             z_think_dim=cfg.get("z_think_dim", 64),
             z_lang_dim=cfg.get("z_lang_dim", 32),
             num_langs=cfg.get("num_langs", len(LANG2ID)),
-            identity_self_dim=cfg.get("identity_self_dim", 2),
+            identity_self_dim=cfg.get("identity_self_dim", 32),
+            identity_intent_dim=cfg.get("identity_intent_dim"),
             z_slow_lang_dim=od.get("z_slow_lang_dim", cfg.get("z_slow_lang_dim", 96)),
             z_slow_logic_dim=od.get("z_slow_logic_dim", cfg.get("z_slow_logic_dim", 96)),
             z_bridge_dim=od.get("z_bridge_dim", cfg.get("z_bridge_dim", 64)),
@@ -719,7 +731,9 @@ def main():
                 val["z_think"] = z_slow_think.detach().clone()
                 val["lang_id"] = int(lang_idx)
                 if hasattr(mem, "add_with_policy"):
-                    mem.add_with_policy(key, val, step=t, meta=meta)
+                    mem_meta = dict(meta)
+                    mem_meta["luria_intent_force"] = _intent_force_from_model(model_cpu)
+                    mem.add_with_policy(key, val, step=t, meta=mem_meta)
                 else:
                     mem.add(key, val, step=t)
 
@@ -801,7 +815,9 @@ def main():
                     meta_tail = {"desc": s["desc"], "lang": s["lang"], "ce_q": s["ce"], "conf": s["conf"], "bucket": "tail"}
                     key_t, val_t = make_sketch(s["enc_avg"], s["z"], meta=meta_tail)
                     if hasattr(mem, "add_with_policy"):
-                        mem.add_with_policy(key_t, val_t, step=t, meta=meta_tail)
+                        tail_meta = dict(meta_tail)
+                        tail_meta["luria_intent_force"] = _intent_force_from_model(model_cpu)
+                        mem.add_with_policy(key_t, val_t, step=t, meta=tail_meta)
                     else:
                         mem.add(key_t, val_t, step=t)
             med = statistics.median(ce_hist) if ce_hist else float("nan")

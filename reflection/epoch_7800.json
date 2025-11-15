@@ -1,0 +1,10 @@
+{
+  "epoch": 7800,
+  "top_failures": [
+    "long",
+    "medium",
+    "short"
+  ],
+  "next_action": "reduce lr 0.5x",
+  "summary": "EMA=7.242, rule_acc=0.00"
+}

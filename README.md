@@ -4,7 +4,7 @@
 > No guarantee, minimal maintenance.  
 > Issues/PRs are welcome, but response is not guaranteed.  
 > I may or may not continue this line; feel free to fork and go wild.
-
+> 실험적인 성격만 강하니까 필자가 틀렸을 수도 있음을 주의하세요.
 
 
 >> 가장 최신 트레인 모델 = https://huggingface.co/naksyu/UZR-Lastest

@@ -1,4 +1,4 @@
-# UZR (루리아 3brains 메타 러너) 개요
+# UZR (루리아 3brains 메타 러너) Proto 개요
 
 > This is a research prototype.  
 > No guarantee, minimal maintenance.  
@@ -328,7 +328,7 @@ Changelog의 “abstain‑weighted base loss” 항목과 `codex.memory.json`의
 
 ---
 
-## 6. 데이터셋·토크나이저(`dataset-mit/`, `kobert/`, `utils/`, `sentencepiece-master/`)
+## 6. 데이터셋·토크나이저(`dataset-mit/`, `kobert/`, `utils/`, `sentencepiece-master/`) <<<<< 이 부분은 필자가 트레인 때 사용했습니다. 이 Repo에선 방법론을 설명합니다.
 
 ### 6.1 KoEn 기본 토크나이저
 
@@ -409,7 +409,7 @@ Changelog의 “abstain‑weighted base loss” 항목과 `codex.memory.json`의
 
 ---
 
-## 8. NPU(QNN) / ORT 엔진(`npu/`, `agent_lora_qnn.md`, `QNN support manual.txt`)
+## (Proto에선 아직 지원하지 않으나 뼈대만 있습니다.)8. NPU(QNN) / ORT 엔진(`npu/`, `agent_lora_qnn.md`, `QNN support manual.txt`) <<<<<<<<<<<< Proto에선 아직 지원하지 않으나 뼈대만 있습니다.
 
 ### 8.1 설계 원칙
 
@@ -476,7 +476,7 @@ ONNX/QNN 엔진은 순수 추론 경로만 담당합니다.
     - 대화 로그를 Fact 노드로 기록
   - UZR 측에선 UZR 자체 메모리 + 외부 L2 그래프를 함께 이용하는 형태가 됩니다.
 
-### 9.2 루리아 전용 CLI (`cli_luria.py`)
+### 9.2 루리아 전용 CLI (`cli_luria.py`) 
 
 `cli_luria.py`는 학습 루프에서 사용하던 구성요소(예: `inner_adapt_z_3brains`, AbstainThresholds)를 활용해,
 
@@ -522,7 +522,7 @@ ONNX/QNN 엔진은 순수 추론 경로만 담당합니다.
 
 ---
 
-## 10. 보안·에이전트 설정·기타 문서
+## 10. 보안·에이전트 설정·기타 문서 (뼈대만 있습니다.)
 
 ### 10.1 SECURITY.md
 
@@ -543,7 +543,7 @@ ONNX/QNN 엔진은 순수 추론 경로만 담당합니다.
 - `peft.example.yaml`
   - LoRA/Adapter/FiLM 등 경량 학습(PEFT) 설정을 위한 예시
 
-### 10.3 Luria Manual / QNN Manual / 추가 텍스트들
+### 10.3 Luria Manual / QNN Manual / 추가 텍스트들 (뼈대만 있습니다.)
 
 - `DOCS_LURIA.md`
   - Luria 매뉴얼(3brains long‑term + Luria 확장)을 어떻게 코드에 반영했는지 정리한 구현 노트

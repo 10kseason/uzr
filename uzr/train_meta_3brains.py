@@ -20,7 +20,7 @@ from .hooks.stage import log_stage_event
 from .luria_logging.shadow_bank import log_sb_event
 from .luria_logging.metrics import log_sb_snapshot
 from .luria_logging.dedup import log_dedup
-from utils.kobert_tokenizer_lite import load_kobert_tokenizer
+from utils.struct_tokenizer import TCodebookTokenizer
 
 # -------------------------------
 # Autonomy gain (Copya.txt): amplify "will" and reject power
@@ -402,7 +402,11 @@ def main():
     ap.add_argument("--identity_intent_dim", type=int, default=16, help="intent-specific subspace inside identity_self (set 0 to disable)")
     ap.add_argument("--num_langs", type=int, default=len(LANG2ID))
     ap.add_argument("--max_len", type=int, default=512)
-    ap.add_argument("--tokenizer", choices=["auto", "koen", "kobert"], default="auto", help="tokenizer choice: auto detects local kobert, else koen")
+    ap.add_argument("--tokenizer", choices=["auto", "tcode"], default="auto", help="tokenizer choice: tcode (structural TCodebook) only; KoEn/KoBERT are disabled")
+    ap.add_argument("--tcode_window", type=int, default=8, help="TCodebook tokenizer window size")
+    ap.add_argument("--tcode_stride", type=int, default=4, help="TCodebook tokenizer stride")
+    ap.add_argument("--tcode_gt", type=int, default=4, help="TCodebook subspaces (Gt)")
+    ap.add_argument("--tcode_kt", type=int, default=256, help="TCodebook codes per subspace (Kt)")
     ap.add_argument("--dataset_mix_prob", type=float, default=0.0, help="probability of sampling dataset-mit QA tasks per step")
     ap.add_argument("--dataset_mit_path", default="", help="override path for dataset-mit CSV (defaults to dataset-mit/mmlu_KO-KR.csv)")
     ap.add_argument("--kobert_hint", action="store_true", help="attach KoBERT masked-LM hints to dataset-mit prompts")
@@ -548,22 +552,26 @@ def main():
         return Path(pref) if pref else Path("kobert")
 
     tok_choice = getattr(args, "tokenizer", "auto")
+    # Auto: structural tokenizer only. KoEn/KoBERT are disabled.
     if tok_choice == "auto":
-        kobert_root = _resolve_kobert_dir(getattr(args, "kobert_dir", "kobert"))
-        if kobert_root.exists() and (kobert_root / "vocab.txt").exists():
-            tok_choice = "kobert"
-        else:
-            tok_choice = "koen"
-    if tok_choice == "kobert":
-        try:
-            _kobert_dir_res = _resolve_kobert_dir(getattr(args, "kobert_dir", "kobert"))
-            tok = load_kobert_tokenizer(_kobert_dir_res, max_len=args.max_len)
-            print(f"[Tokenizer] KoBERT tokenizer enabled (vocab={tok.vocab_size}, dir={_kobert_dir_res})")
-        except Exception as e:
-            print(f"[Tokenizer] KoBERT tokenizer load failed ({e}); falling back to KoEnTokenizer")
-            tok = KoEnTokenizer(max_len=args.max_len)
-    else:
-        tok = KoEnTokenizer(max_len=args.max_len)
+        tok_choice = "tcode"
+    if tok_choice != "tcode":
+        raise ValueError("KoEn/KoBERT tokenizers are disabled. Use --tokenizer tcode (or auto).")
+
+    tok = TCodebookTokenizer(
+        max_len=args.max_len,
+        window_size=args.tcode_window,
+        stride=args.tcode_stride,
+        Gt=args.tcode_gt,
+        Kt=args.tcode_kt,
+        dt=384,
+        m=131072,
+        ema_decay=0.995,
+        seed=args.seed,
+    )
+    print(f"[Tokenizer] TCodebook structural tokenizer enabled (Gt={tok.Gt}, Kt={tok.Kt}, window={tok.window_size}, stride={tok.stride}, vocab={tok.vocab_size})")
+    # Persist the resolved tokenizer choice for checkpoints/logs
+    args.tokenizer = tok_choice
     dataset_sampler = None
     # Auto-enable dataset-mit mixing if local CSV exists and user didn't override mix prob
     try:

@@ -1,0 +1,25 @@
+# Tokenizer 작업 메모 규칙
+- 이 파일은 토크나이저 관련 변경/실험/설정값을 기록하는 전용 메모장입니다.
+- 변경/실험을 시작할 때마다 날짜/목적/파라미터(window/stride/Gt/Kt/max_len/struct_offset 등)를 적고, 적용 코드/커밋/체크포인트 경로를 남깁니다.
+- KoEn/KoBERT는 현재 비사용(차단) 상태이며, 구조 토크나이저(TCodebook sliding)가 기본이자 유일한 선택지입니다.
+- ids→텍스트 복원은 지원하지 않으므로, 구조 토큰 문자열(KA07 등)로만 디버깅합니다. 자연어 대응이 필요하면 원문을 별도 메타로 저장하세요.
+- 윈도우/스트라이드가 바뀌면 전체 데이터 재토크나이징이 필요합니다. 설정 불일치 방지를 위해 체크포인트 args와 여기 메모에 동일 값을 기록하세요.
+
+# 최근 변경 요약 (필수 기록)
+- 2025-11-22: 기본 토크나이저를 TCodebook 슬라이딩으로 고정(Gt=4, Kt=256, window=8, stride=4, vocab=offset+1024). KoEn/KoBERT 비활성화. Codebook 기본값도 동일하게 조정.
+
+# 상세 기록
+- 날짜: 2025-11-22
+- 목적/이슈: 구조 토크나이저를 유일 경로로 고정, KoEn/KoBERT 차단, CLI/longrun/mem_server/orchestrator/inspect 전역에서 구조 토큰 일관성 확보.
+- 파라미터: max_len=512(default), window=8, stride=4, Gt=4, Kt=256, struct_offset=4(PAD/BOS/EOS/UNK), seed=42, dt=384, m=131072, ema_decay=0.995
+- 적용 파일/커밋: train_meta_3brains.py, chat_cli.py, cli_luria.py, infer_longrun*.py, mem_server.py, uzr_orchestrator_cli.py, uzr_ood_predict_uzrstyle.py, uzr_inspect.py, README.md, docs/datasets_tokenizer.md, docs/DOCS_LURIA.md, codebook.py
+- 체크포인트/데이터 경로: 기존 KoEn/KoBERT 토크나이징 데이터는 재토크나이징 필요(구조 토큰과 호환되지 않음). 구조 ckpt는 tokenizer=tcode args로 저장.
+- 메모/이슈: ids→텍스트 복원 불가(구조 토큰 문자열만 디버그). window/stride 변경 시 전체 데이터 재토크나이징 필요. ByteTokenizer는 vocab=258 레거시 ckpt 전용.
+
+# 기록 템플릿
+- 날짜:
+- 목적/이슈:
+- 파라미터: max_len= , window= , stride= , Gt= , Kt= , struct_offset= , seed=
+- 적용 파일/커밋:
+- 체크포인트/데이터 경로:
+- 메모/이슈:

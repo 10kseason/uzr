@@ -15,7 +15,8 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.append(str(HERE))
 sys.path.append(str(HERE / 'uzr'))
 
-from uzr.model import UZRModel, ByteTokenizer, KoEnTokenizer, seq_ce_loss, soft_threshold, confidence_from_logits
+from uzr.model import UZRModel, ByteTokenizer, seq_ce_loss, soft_threshold, confidence_from_logits
+from uzr.utils.struct_tokenizer import TCodebookTokenizer
 from uzr.memory import CompressedMemory, make_sketch
 from uzr.meta_core import load_meta_config, AbstainThresholds, maybe_abstain, inner_steps_from_conf
 import uzr.tasks as tasklib
@@ -532,7 +533,7 @@ def main():
     cfg = data["args"]
     rdw = data.get("model", {}).get("readout.weight")
     rows = rdw.size(0) if isinstance(rdw, torch.Tensor) else None
-    tok = ByteTokenizer(max_len=cfg["max_len"]) if rows == 258 else KoEnTokenizer(max_len=cfg["max_len"])
+    tok = ByteTokenizer(max_len=cfg["max_len"]) if rows == 258 else TCodebookTokenizer(max_len=cfg["max_len"])
     def _build_model(override_dims=None):
         od = override_dims or {}
         return UZRModel(

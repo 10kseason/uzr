@@ -1,0 +1,52 @@
+# 목적
+- AI 에이전트가 `uzr` 저장소를 빠르게 이해하고 안전하게 작업하기 위한 인프라/구성 요약입니다. 세부 구현은 코드와 기존 문서를 우선 확인하세요.
+
+# 필수 규칙(요약)
+- 루트 `AGENTS.md` 지침을 최우선으로 따릅니다(수술적 수정, 불필요한 리팩터링 금지, 네트워크/권한 작업은 승인 필요).
+- 변경 후 반드시 `changelog.md`와 `codex.memory.json`을 갱신합니다.
+- `백업 ( 이 폴더는 손대지마세요)/`와 기타 백업·로그 파일은 수정 금지.
+
+# 저장소 개요
+- 정체성 “루리아”를 가진 3brains 메타 러너 연구용 프로토타입.
+- 핵심 모듈: `model.py`(UZRModel, self‑eval/intent/transition), `memory.py`(CompressedMemory), `meta_core.py`(게이팅·abstain), `codebook.py`(코드북/전이).
+- 학습 루프: `train_meta_3brains.py`(주 진입점), `train_meta_patched_v2*.py`/`train_meta_patched*.py`(실험용 변형).
+- 추론/CLI/서버: `cli_luria.py`, `chat_cli.py`, `infer_longrun*.py`, `uzr_rest_server.py`, `uzr_orchestrator_cli.py`, `uzr_inspect.py`.
+- 문서: `README.md`(전체판), `docs/`(architecture/training/intent/memory/transition/datasets_tokenizer/metrics_logging/troubleshooting), `docs/DOCS_LURIA.md`(매뉴얼 반영 사항), `docs/uzr model arc-2.txt`(model/memory/meta_core 핵심), `LURIA_LOGGING_README.md`.
+- NPU(QNN)/엔진: `npu/engine.py`, `npu/runtime_ort.py`, `agent_lora_qnn.md`, `QNN support manual.txt`, `engine.example.yaml`.
+- 외부 메모리 게이트웨이: `mem_server.py`(+ `logus-exaone/` 데이터), 오케스트레이터: `uzr_orchestrator_cli.py`, EXAONE 연동: `exaone_adapter.py`, `exaone_cli.py`.
+
+# 실행/학습 스니펫
+- 학습(예시, GPU):  
+  `python -m uzr.train_meta_3brains --device cuda --steps 5000 --inner_steps 8 --inner_eta 0.425 --self_eval on --abstain --save uzr_3brains_ckpt.pt`
+  - KoBERT/데이터셋 혼합은 `--tokenizer kobert --dataset_mix_prob 0.35 --kobert_hint` 참고(`docs/training.md`, `docs/datasets_tokenizer.md`).
+- 채팅 CLI: `python -m uzr.cli_luria --device cuda --resume uzr_3brains_ckpt_last.pt`
+- OpenAI 스타일 REST: `python -m uzr.uzr_rest_server --ckpt uzr_3brains_ckpt_best.pt --device cpu`
+- 외부 메모리 게이트웨이: `python mem_server.py --host 127.0.0.1 --port 8088 --store_dir logus-exaone`
+  - Dreamer/미러 옵션은 codex.memory.json의 commands 참조.
+- 오케스트레이터(외부 LLM↔UZR 라우팅): `python -m uzr.uzr_orchestrator_cli --ckpt uzr_3brains_ckpt_best.pt --device cpu --backend http --exa_url http://127.0.0.1:1234/v1/chat/completions --mem_on --mem_url http://127.0.0.1:8088 --mem_k 6 --primer`
+- NPU(QNN) 추론: ONNX/QDQ ckpt와 `engine.example.yaml`/`agent_lora_qnn.md`를 참고해 ORT 엔진을 설정하고 `chat_cli.py`/`cli_luria.py`에서 QNN EP를 선택.
+
+# 데이터/토크나이저
+- 기본 토크나이저: 구조 전용 TCodebook 슬라이딩(Gt=4, Kt=256, window=8, stride=4). KoEn/KoBERT는 비활성.
+- `dataset-mit/mmlu_KO-KR.csv` 존재 시 학습에서 자동 혼합 활성화 가능(`--dataset_mix_prob` 기본 0.35 자동 설정 규칙 있음).
+- 코드북/전이 관련 자료는 `codebook.py`, `docs/transition.md` 확인.
+
+# 로그/산출물 위치
+- 학습 로그·리포트: `luria_logging/`, `logua/`, `logus-exaone/`, `bunseki/`, `luria-log/` 등. 기존 로그는 유지하고 필요 시 새 파일로 추가.
+- 장기 러너/추론 로그: `infer_longrun*_logged.py`, `logus-luria/`, `reflection/` 등에서 생성.
+
+# 주의/우선순위
+- 네트워크 호출, 패키지 설치, 파괴적 명령은 사용자 승인 없이 실행하지 않음(AGENTS.md).
+- 파일명·기존 구조는 유지하고, 새 파이썬 파일은 snake_case로 생성.
+- 백업·대용량 파일(`uzr.zip`, `백업.zip`, `node_modules/`, `백업 ( 이 폴더는 손대지마세요)/`)은 건드리지 말 것.
+- 테스트/검증은 변경 범위 내에서 가능한 최소한으로 수행. 환경 제약 시 건너뛰고 사유를 기록.
+
+# 참고 문서 빠른 링크
+- `README.md` 섹션: 모델/메모리/의지/학습/데이터/로그/NPU/추론/보안.
+- `docs/architecture.md`, `docs/training.md`, `docs/intent.md`, `docs/memory.md`, `docs/transition.md`, `docs/metrics_logging.md`, `docs/troubleshooting.md`.
+- 보안: `SECURITY.md` (mem_server 인증/제한), 에이전트 설정: `agent.example.yaml`, `agent_lora_qnn.md`.
+
+# 에이전트 작업 체크리스트
+- 작업 전: AGENTS.md 읽기 → 관련 코드/문서 빠르게 스캔.
+- 작업 중: 영향 최소화, 불필요한 리팩터링 금지, 새 의존성 추가 금지.
+- 작업 후: 변경 요약을 `changelog.md`에 추가, 정책/사실 변동을 `codex.memory.json`에 기록(민감정보 제외), 필요한 경우 `todos` 업데이트.

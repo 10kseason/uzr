@@ -1,0 +1,18 @@
+# agent.example.yaml
+intent:
+  tau_agent: 0.55
+  min_tool_conf: 0.6
+
+safety:
+  blocked_domains: ["*://localhost/*"]
+  allowlist_domains: []
+  require_confirm_for_write: true
+  pii_redaction: true
+
+tools:
+  - name: search_web
+    params: [q, n]
+    rate_limit_qps: 1.0
+  - name: calculator
+    params: [expression]
+    rate_limit_qps: 5.0

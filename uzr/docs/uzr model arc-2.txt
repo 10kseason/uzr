@@ -1,0 +1,42 @@
+UZR Model Architecture — Arc-2 (model.py / memory.py / meta_core.py)
+==============================================================
+
+이 문서는 UZR의 핵심 연산 파일(model.py, memory.py, meta_core.py)을 구조 토크나이저(TCodebook) 기반 설정에서 빠르게 이해하도록 작성한 아키텍처 참고서입니다. 코드 우선이며, 상세 수식·파라미터는 각 소스와 변경 로그(changelog.md)를 따라갑니다.
+
+공통 전제 (Tokenizer 호환성)
+- 입력 토크나이저는 구조 전용 TCodebook 슬라이딩(기본 Gt=4, Kt=256, window=8/stride=4)만 사용합니다. KoEn/KoBERT는 비활성.
+- PAD=0, BOS/EOS/UNK는 구조 토큰 오프셋 뒤에 둡니다. 모델/손실 계산 시 반드시 tok.PAD를 ignore_index로 사용합니다.
+- ids→텍스트 복원은 지원하지 않으며, 구조 토큰 문자열(KA07 등)만 디버그용으로 봅니다.
+
+1) model.py — UZRModel 코어
+- 구성: TinyEncoder(Transformer) + 3brains(z_rule, z_think, z_slow_lang, z_slow_logic, z_bridge) + identity/intent + self-eval + optional transition heads.
+- 토크나이저 연계: vocab_size는 토크나이저에 맞춰 초기화하며, set_tokenizer_specials로 PAD/BOS/EOS를 주입해 Brier/CE에 반영합니다.
+- Self-eval/abstain: self_eval 헤드(conf/entropy/Brier) + meta_core.AbstaInThresholds/maybe_abstain 로스 가중에 사용.
+- Identity/intent: identity_self + intent 서브스페이스; intent가 inner steps/top-k/메모리 게이트에 편향을 줌.
+- Transition (선택): Codebook 기반 Δz/BOW 예측 헤드. 구조 토크나이저 사용 시에도 별도 제약 없음.
+- NPU/엔진 훅: set_npu_engine/npu_run_logits로 ORT/QNN 통합 가능. 모델 구조 불변.
+
+2) memory.py — CompressedMemory
+- add_with_policy: surprise/entropy/dup/near-merge/stage/rate/warmup/2PC를 거쳐 메모리 쓰기 결정. 구조 토큰 입력에도 동일 로직 적용.
+- codebook/representation: repr_text는 메타데이터; 구조 토큰과 독립적. write_threshold_min/max 등 게이트는 changelog와 코드 기본값 확인.
+- shadow_bank + rebalance: stage된 항목 승격/정리, 정책은 set_policy_thresholds로 런타임 조정.
+- learner: 선택적 예측기(learn_hidden, learn_depth)로 키/avg_emb 학습. 구조 토큰 여부와 무관.
+- serialization: state_dict/load_state_dict로 전체 상태 보존; max_items 기본 32k.
+
+3) meta_core.py — Self-eval/Abstain/리플렉션 유틸
+- SelfEvalHead: hidden[B,D] → conf[0,1]; 시퀀스 입력 시 평균 풀링 후 선형+시그모이드.
+- sequence_entropy_from_logits: 토큰 확률 엔트로피(옵션 top-k), ignore_index 적용.
+- brier_loss_from_conf: conf와 토큰 정확도(마스크) 기반 Brier 로스.
+- AbstainThresholds + maybe_abstain: conf<conf_min 또는 ent>ent_max일 때 abstain 마스크 생성.
+- Error/Reflection 도우미: error_tagging, reflection 메모 기록, balanced replay용 카테고리 분류(세부는 코드 주석 참고).
+
+4) 구조 토크나이저 호환 체크리스트
+- 모델/훈련/추론 스크립트는 vocab_size=토크나이저.vocab_size, ignore_index=tok.PAD로 설정했는지 확인.
+- 데이터 재토크나이징 필요: window/stride/Gt/Kt가 바뀌면 전체 데이터/ckpt 재생성.
+- 디코딩 경로가 텍스트 복원을 기대하지 않는지(구조 토큰 문자열만 사용) 확인.
+
+참고 문서/파일
+- docs/DOCS_LURIA.md — 매뉴얼 반영 사항(경로 업데이트됨)
+- docs/Infra memory for codex or ai agents.txt — 에이전트용 인프라 요약
+- docs/memory for Tokernizer.txt — 토크나이저 실험/설정 기록 용지
+- changelog.md — 정책/기능 변화 시점

@@ -1,0 +1,22 @@
+# engine.example.yaml
+providers:
+  - QNNExecutionProvider
+  - DmlExecutionProvider
+  - CPUExecutionProvider
+
+provider_options:
+  QNNExecutionProvider:
+    # Choose ONE of the following two lines:
+    backend_type: "htp"
+    # backend_path: "QnnHtp.dll"   # or libQnnHtp.so on Android/Linux
+
+session_options:
+  session.disable_cpu_ep_fallback: 1   # set 0 in production if partial fallback allowed
+  ep.context_enable: 1                 # enable context cache
+
+model:
+  path: "models/model_int8_qdq.onnx"
+  static_shapes:
+    batch: 1
+    seq_len: 256
+    kv_shape: [24, 32, 128]   # example: layers, heads, head_dim

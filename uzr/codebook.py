@@ -120,8 +120,8 @@ class TCodebook:
 
     def __init__(
         self,
-        Gt: int = 6,           # 서브스페이스 개수
-        Kt: int = 128,         # 코드북 크기 (각 서브스페이스)
+        Gt: int = 4,           # 서브스페이스 개수 (레거시 6 → 4로 축소)
+        Kt: int = 256,         # 코드북 크기 (각 서브스페이스, 레거시 128 → 256)
         dt: int = 384,         # 투영 차원
         m: int = 131072,       # 해시 공간 크기
         ema_decay: float = 0.995,
@@ -455,7 +455,8 @@ class CodebookManager:
 
         # T-Codebook 설정
         if t_cfg is None:
-            t_cfg = dict(Gt=6, Kt=128, dt=384, m=131072, ema_decay=0.995)
+            # 구조 토커나이저 기본값: 4×256 = 1024 심볼
+            t_cfg = dict(Gt=4, Kt=256, dt=384, m=131072, ema_decay=0.995)
         self.t = TCodebook(**t_cfg, seed=seed)
 
         # V-Codebook 설정

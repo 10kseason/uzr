@@ -7,7 +7,7 @@ import hashlib, hmac
 
 import torch
 
-from .chat_cli import load_checkpoint, KoEnTokenizer, ByteTokenizer
+from .chat_cli import load_checkpoint, ByteTokenizer
 from .exaone_adapter import ExaoneGenerator
 try:
     from utils.logger_luria import append_jsonl as _append_jsonl

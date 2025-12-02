@@ -16,7 +16,8 @@ import torch
 
 # 濡쒖뺄 ?⑦궎吏 ?꾪룷??(?⑦궎吏 紐⑤뱶 沅뚯옣)
 # ?꾨줈?앺듃 猷⑦듃?먯꽌: python -m uzr.cli_luria --device cpu --resume ckpt.pt
-from .model import UZRModel, KoEnTokenizer  # tokenizer/model
+from .model import UZRModel  # tokenizer/model
+from .utils.struct_tokenizer import TCodebookTokenizer
 try:
     from .npu import OrtEngine
 except Exception:
@@ -30,7 +31,7 @@ from .memory import CompressedMemory
 # -----------------------------
 
 def f3(x):
-    """None-safe 3?먮- ?щ㎎??""
+    """None-safe 3?먮- ?щ㎎??"""
     return "nan" if x is None else f"{x:.3f}"
 
 def _intent_force_from_model(model):
@@ -71,7 +72,7 @@ class SessionState:
 def build_model(device: torch.device, mem: Optional[CompressedMemory], ckpt_args: Optional[Dict[str, Any]] = None) -> UZRModel:
     # ?섏씠?쇳뙆?쇰??곕뒗 泥댄겕?ъ씤???먮뒗 湲곕낯媛??ъ슜
     max_len = ckpt_args.get("max_len", 128) if ckpt_args else 128
-    tok = KoEnTokenizer(max_len=max_len)
+    tok = TCodebookTokenizer(max_len=max_len)
 
     # 泥댄겕?ъ씤?몄뿉???섏씠?쇳뙆?쇰???濡쒕뱶 ?먮뒗 湲곕낯媛??ъ슜
     if ckpt_args:
@@ -107,12 +108,12 @@ def build_model(device: torch.device, mem: Optional[CompressedMemory], ckpt_args
     )
     return m.to(device)
 
-def encode_pair(tok: KoEnTokenizer, x: str, y: Optional[str] = None, device="cpu"):
+def encode_pair(tok: TCodebookTokenizer, x: str, y: Optional[str] = None, device="cpu"):
     X = tok.encode(x).unsqueeze(0).to(device)
     Y = tok.encode(y).unsqueeze(0).to(device) if y is not None else None
     return X, Y
 
-def _extract_prompt_ids(tok: KoEnTokenizer, text: str) -> List[int]:
+def _extract_prompt_ids(tok: TCodebookTokenizer, text: str) -> List[int]:
     ids = tok.encode(text).tolist()
     out = []
     for i in ids:
@@ -130,10 +131,11 @@ def _entropy_from_probs(probs: torch.Tensor) -> float:
     ent = -(p * p.log()).sum().item()
     return float(ent)
 
-def generate_tokens(model: UZRModel, tok: KoEnTokenizer, prompt_ids: List[int], z_for_q: Dict[str, torch.Tensor], device: torch.device,
+def generate_tokens(model: UZRModel, tok: TCodebookTokenizer, prompt_ids: List[int], z_for_q: Dict[str, torch.Tensor], device: torch.device,
                     max_new_tokens: int = 128, temperature: float = 0.7, top_p: float = 0.9, top_k: int = 40,
                     rep_penalty: float = 1.10, min_eos_len: int = 8, ort_engine=None) -> Dict[str, Any]:
     last_entropy: Optional[float] = None
+    ids = torch.tensor(prompt_ids, dtype=torch.long, device=device).unsqueeze(0)
     # Respect encoder maximum length
     try:
         max_len_model = int(getattr(model.encoder, "max_len", 128))
@@ -156,10 +158,17 @@ def generate_tokens(model: UZRModel, tok: KoEnTokenizer, prompt_ids: List[int], 
                     logits = model(ids, z_for_q)[:, -1, :]
             else:
                 logits = model(ids, z_for_q)[:, -1, :]
-                probs_filtered = torch.zeros_like(probs)
-                probs_filtered.scatter_(0, top_k_idx, top_k_probs)
-                probs = probs_filtered
-                probs = probs / probs.sum().clamp_min(1e-9)  # Renormalize
+
+            # Temperature + softmax
+            logits_vec = logits[0] / max(temperature, 1e-6)
+            probs = torch.softmax(logits_vec, dim=-1)
+
+            # Top-k filtering (optional)
+            if top_k > 0 and top_k < probs.numel():
+                top_k_probs, top_k_idx = torch.topk(probs, k=top_k)
+                filtered = torch.zeros_like(probs)
+                filtered.scatter_(0, top_k_idx, top_k_probs)
+                probs = filtered / filtered.sum().clamp_min(1e-9)
 
             # Apply top-p (nucleus sampling)
             if 0.0 < top_p < 1.0:
@@ -185,7 +194,7 @@ def generate_tokens(model: UZRModel, tok: KoEnTokenizer, prompt_ids: List[int], 
     gen_ids = ids.squeeze(0).tolist()[len(prompt_ids):]
     return {"gen_ids": gen_ids, "last_entropy": last_entropy}
 
-def predict(model: UZRModel, tok: KoEnTokenizer, prompt: str, state: SessionState, device: torch.device,
+def predict(model: UZRModel, tok: TCodebookTokenizer, prompt: str, state: SessionState, device: torch.device,
             gen_cfg: Dict[str, Any]) -> Dict[str, Any]:
     prompt_ids = _extract_prompt_ids(tok, prompt)
     out = generate_tokens(
@@ -227,7 +236,7 @@ def predict(model: UZRModel, tok: KoEnTokenizer, prompt: str, state: SessionStat
         "entropy": ent,
     }
 
-def adapt_z(model_cpu: UZRModel, tok: KoEnTokenizer, Xc_txt: str, Yc_txt: str, state: SessionState, steps:int=6,
+def adapt_z(model_cpu: UZRModel, tok: TCodebookTokenizer, Xc_txt: str, Yc_txt: str, state: SessionState, steps:int=6,
             lam=(1e-3,1e-3,1e-3), eta=0.5, device=torch.device("cpu")) -> Dict[str, torch.Tensor]:
     # inner_adapt??CPU 寃쎈줈?먯꽌 ?섑뻾
     model_cpu.eval().to(device)
@@ -394,7 +403,7 @@ if args.engine != "torch" and args.ort_model:
     # 紐⑤뜽 濡쒕뱶 (泥댄겕?ъ씤??args ?ъ슜)
     model = build_model(device, mem, ckpt_args)
     max_len = ckpt_args.get("max_len", 128) if ckpt_args else 128
-    tok = KoEnTokenizer(max_len=max_len)
+    tok = TCodebookTokenizer(max_len=max_len)
 
     # 泥댄겕?ъ씤??state_dict 蹂듭썝
     if ckpt is not None:
@@ -812,7 +821,3 @@ if args.engine != "torch" and args.ort_model:
 
 if __name__ == "__main__":
     main()
-
-
-
-

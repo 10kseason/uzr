@@ -283,7 +283,7 @@ class ReflectionLogger:
             tips.append("upweight replay for case/lang_mix")
         if "reverse" in cats:
             tips.append("add order-invariant hints or penalties")
-        if acc < 0.9:
+        if acc < 0.4:
             tips.append("reduce lr 0.5x")
         return "; ".join(tips) if tips else "monitor"
 

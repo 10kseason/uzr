@@ -3,12 +3,14 @@ import os
 import torch
 import torch.nn.functional as F
 from typing import List, Optional, Union
+from pathlib import Path
 import json as _json
 import time as _time
 from urllib import request as _urlreq, error as _urlerr
 import hashlib as _hashlib, hmac as _hmac
 
-from .model import UZRModel, ByteTokenizer, KoEnTokenizer
+from .model import UZRModel, ByteTokenizer
+from .utils.struct_tokenizer import TCodebookTokenizer
 try:
     from .npu import OrtEngine
 except Exception:
@@ -43,13 +45,13 @@ def detect_lang_from_text(text: str) -> str:
 
 
 class ChatSession:
-    """Interactive chat session with UZR model."""
+    """Interactive chat session with UZR model (structural tokenizer)."""
 
     def __init__(
         self,
         model: UZRModel,
         memory: CompressedMemory,
-        tokenizer: Union[ByteTokenizer, KoEnTokenizer],
+        tokenizer: Union[ByteTokenizer, TCodebookTokenizer],
         device: str = "cuda",
         temperature: float = 0.8,
         top_p: float = 0.9,
@@ -329,7 +331,7 @@ class ChatSession:
             self.memory.clear_state()
 
 
-def _pick_tokenizer_for_ckpt(data, max_len: int):
+def _pick_tokenizer_for_ckpt(data, max_len: int, ckpt_args: Optional[dict]):
     try:
         rdw = data.get("model", {}).get("readout.weight")
         if isinstance(rdw, torch.Tensor):
@@ -338,21 +340,61 @@ def _pick_tokenizer_for_ckpt(data, max_len: int):
             rows = None
     except Exception:
         rows = None
-    # Byte tokenizer has fixed vocab 258. Otherwise prefer KoEn.
+    tok_name = (ckpt_args or {}).get("tokenizer", "").lower() if isinstance(ckpt_args, dict) else ""
+    if tok_name in {"auto", ""}:
+        tok_name = "tcode"
+
+    def _resolve_kobert_dir(pref: str) -> Optional[Path]:
+        cands = []
+        try:
+            if pref:
+                cands.append(Path(pref).expanduser())
+        except Exception:
+            pass
+        try:
+            cands.append(Path(__file__).resolve().parent / "kobert")
+        except Exception:
+            pass
+        cands.append(Path.cwd() / "kobert")
+        cands.append(Path.cwd() / "uzr" / "kobert")
+        for p in cands:
+            try:
+                if p.exists() and (p / "vocab.txt").exists():
+                    return p
+            except Exception:
+                continue
+        return None
+
+    # Structural tokenizer (default)
+    if tok_name in {"tcode", "tcodebook", "tcodebook-sliding", "structure"}:
+        return TCodebookTokenizer(
+            max_len=max_len,
+            window_size=(ckpt_args or {}).get("tcode_window", 8),
+            stride=(ckpt_args or {}).get("tcode_stride", 4),
+            Gt=(ckpt_args or {}).get("tcode_gt", 4),
+            Kt=(ckpt_args or {}).get("tcode_kt", 256),
+            dt=(ckpt_args or {}).get("tcode_dt", 384),
+            m=131072,
+            ema_decay=0.995,
+            seed=(ckpt_args or {}).get("seed", 42),
+        )
+
+    # Byte tokenizer has fixed vocab 258 (kept only for legacy checkpoints).
     if rows == 258:
         return ByteTokenizer(max_len=max_len)
-    tok = KoEnTokenizer(max_len=max_len)
-    # If the checkpoint vocab is smaller than the current tokenizer vocab,
-    # truncate the tokenizer tables so ids stay within [0, rows).
-    try:
-        if isinstance(rows, int) and rows > 0 and rows < tok.vocab_size:
-            tok.itos = tok.itos[:rows]
-            tok.stoi = {ch: i for i, ch in enumerate(tok.itos)}
-            tok.vocab_size = len(tok.itos)
-    except Exception:
-        # Fallback to the original tokenizer if truncation fails.
-        pass
-    return tok
+
+    # KoEn/KoBERT are disabled; fall back to structural tokenizer.
+    return TCodebookTokenizer(
+        max_len=max_len,
+        window_size=(ckpt_args or {}).get("tcode_window", 8),
+        stride=(ckpt_args or {}).get("tcode_stride", 4),
+        Gt=(ckpt_args or {}).get("tcode_gt", 4),
+        Kt=(ckpt_args or {}).get("tcode_kt", 256),
+        dt=(ckpt_args or {}).get("tcode_dt", 384),
+        m=131072,
+        ema_decay=0.995,
+        seed=(ckpt_args or {}).get("seed", 42),
+    )
 
 
 def load_checkpoint(ckpt_path: str, device: str = "cuda"):
@@ -366,9 +408,9 @@ def load_checkpoint(ckpt_path: str, device: str = "cuda"):
     # Extract args
     args = data.get("args", {})
 
-    # Create tokenizer (prefer KoEn for KO/EN checkpoints; fallback to Byte)
+    # Create tokenizer (structural/TCodebook default; KoEn/KoBERT disabled)
     max_len = args.get("max_len", 512)
-    tok = _pick_tokenizer_for_ckpt(data, max_len)
+    tok = _pick_tokenizer_for_ckpt(data, max_len, args)
 
     # Create memory
     mem = None

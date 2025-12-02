@@ -1,0 +1,375 @@
+좋아. 아래는 **QNN(Qualcomm NPU) 구현 매뉴얼 v1.0** — “NPU는 추론, CPU+GPU는 가벼운 미세학습(PEFT)”을 기조로, 실서비스에 바로 넣을 수 있게 끝까지 설계한 문서야. 코드/폴더 구조/체크리스트/수용 기준까지 전부 포함했다. (QNN EP 공식 문서와 최신 ORT 가이드를 근거로 함. 인용 표시는 문단 끝에 달았어.)
+
+---
+
+# QNN 구현 매뉴얼 v1.0
+
+**원칙:** **NPU = 추론**, **CPU+GPU = 경량 학습(LoRA/Adapter/FiLM/메모리)**
+**목표:** Snapdragon X/Windows ARM64 및 Android 기기에서 ONNX Runtime(QNN EP)로 INT8 QDQ 모델을 안정적으로 추론하고, 어댑터/게인/외부 메모리만 실시간·준실시간으로 갱신하기.
+
+---
+
+## 0) 범위와 합의
+
+* 이 문서는 **ONNX Runtime(ORT) QNN Execution Provider**를 사용해 **Qualcomm NPU(HTP)** 위에서 **정적 그래프**를 실행하는 것을 전제로 한다.
+* **학습 업데이트는 본체 가중치가 아니라** LoRA/Adapter/FiLM/외부 메모리 등 **소형 파라미터**만 대상으로 하며, NPU 세션은 **핫스왑** 또는 **입력 텐서 바인딩 교체** 방식으로 반영한다.
+* Windows on Snapdragon(ARM64), Android를 1차 타깃으로 하며, Python/C++ 런타임 구성 예시를 제공한다. ([ONNX Runtime][1])
+
+---
+
+## 1) 대상 환경 & 사전 준비
+
+### 1.1 운영체제/플랫폼
+
+* **Windows ARM64**: 로컬 Snapdragon NPU 추론에 적합.
+* **Android**: Snapdragon SoC에서 QNN EP 사용 가능. ([ONNX Runtime][1])
+
+### 1.2 ONNX Runtime(QNN EP) 설치
+
+* Python 패키지: `pip install onnxruntime-qnn`
+  (Windows ARM64용 추론 휠 제공. ORT 1.18.0+부터는 **별도 QNN SDK 설치 없이도** 필요한 QNN 의존 라이브러리가 패키지에 포함됨) ([ONNX Runtime][1])
+* C++/NuGet: Microsoft.ML.OnnxRuntime.QNN 패키지 사용 가능. ([ONNX Runtime][1])
+
+### 1.3 QNN SDK (소스 빌드/고급 기능 시)
+
+* QNN EP는 QNN 2.22.x에서 테스트(문서 기준). 특정 기능/플랫폼은 QNN SDK가 필요할 수 있다. ([ONNX Runtime][1])
+
+### 1.4 EP 이름과 옵션
+
+* EP 이름: **`"QNNExecutionProvider"`**.
+* 주요 옵션:
+
+  * `backend_type`: `htp`(NPU, 기본), `cpu`(참고용), `gpu`.
+  * `backend_path`: `QnnHtp.dll`(Windows) / `libQnnHtp.so`(Linux/Android) 등.
+  * **주의:** `backend_type`과 `backend_path`는 **서로 대체 관계** — 둘 중 하나만 지정. ([adrianlizarraga.github.io][2])
+
+---
+
+## 2) 저장소 레이아웃(권장)
+
+```
+project/
+  npu/
+    export_onnx.py          # PyTorch -> ONNX (opset ≥ 17, KV/shape 고정)
+    quantize_onnx.py        # QDQ INT8 정적 양자화 (MinMax/Percentile)
+    runtime_ort.py          # ORT 세션(QNN→DML→CPU), 옵션/캐시/프로파일링
+    engine.py               # 추론 엔진 스위치 ('torch'|'ort'); 핫스왑 포함
+    bench.py                # tokens/s, tokens/s/W 벤치
+    ctx/
+      gen_qnn_ctx_onnx_model.py  # QNN context 공유 모델 래퍼(선택)
+      cache/                 # qnn_ctx.bin 등 컨텍스트 캐시
+  adapters/
+    latest.safetensors       # LoRA/Adapter 파라미터
+  docs/
+    qnn_manual.md            # 본 문서
+  models/
+    model_fp32.onnx
+    model_fp32_sim.onnx
+    model_int8_qdq.onnx
+```
+
+---
+
+## 3) 모델 내보내기(PyTorch → ONNX)
+
+### 3.1 규칙
+
+* **opset ≥ 17** (현행 ORT/QNN 변환 체인 호환 확보).
+* **정적 shape** 권장: 배치/시퀀스 길이/KV 캐시 **고정**. 스트리밍은 **슬라이딩 윈도우**로 처리. (QNN은 정적 그래프·고정 shape에 최적화)
+* 파라미터는 initializer로 남기되, **어댑터/게인/바이어스는 “입력 텐서”**로 노출(실시간 업데이트 대비).
+* 모델이 2GB↑ 가능성 있으면 external data 사용 → `onnxsim` 단순화.
+
+### 3.2 예시 (요지)
+
+```python
+# export_onnx.py
+torch.onnx.export(
+    model, (input_ids, kv_cache), "models/model_fp32.onnx",
+    opset_version=17, do_constant_folding=True,
+    input_names=["input_ids", "kv_in", "adapter_A", "adapter_B", "film_gamma", "film_beta"],
+    output_names=["logits", "kv_out"],
+    dynamic_axes={"input_ids": {0: "B"}},  # kv_in/out은 shape 고정 (QNN용)
+)
+# onnxsim으로 상수 폴딩/그래프 정리
+subprocess.run(["onnxsim", "models/model_fp32.onnx", "models/model_fp32_sim.onnx", "--overwrite"])
+```
+
+---
+
+## 4) QDQ INT8 정적 양자화
+
+### 4.1 원칙
+
+* **QDQ(Quantize-DeQuantize)** 형태로 삽입.
+* `MatMul/Conv` 중심 INT8, **Softmax/LayerNorm 등 민감 연산은 FP 유지**.
+* 대표 입력(예: 512 샘플)로 MinMax/Percentile 보정.
+
+### 4.2 예시 (요지)
+
+```python
+from onnxruntime.quantization import quantize_static, CalibrationMethod, QuantType
+
+quantize_static(
+  "models/model_fp32_sim.onnx", "models/model_int8_qdq.onnx",
+  calibration_data_reader=dr,                       # 대표 데이터 리더
+  calibrate_method=CalibrationMethod.MinMax,
+  weight_type=QuantType.QInt8, activation_type=QuantType.QUInt8,
+  per_channel=True, op_types_to_quantize=["MatMul","Conv"],
+  extra_options={"WeightSymmetric": True, "ActivationSymmetric": False, "AddQDQPairToWeight": True}
+)
+```
+
+---
+
+## 5) 런타임(ORT + QNN EP) 구성
+
+### 5.1 세션 생성 우선순위
+
+* **`['QNNExecutionProvider', 'DmlExecutionProvider', 'CPUExecutionProvider']`**
+  (QNN 실패 시 DML, 최종 CPU). ([ONNX Runtime][3])
+
+### 5.2 핵심 옵션
+
+* `providers=['QNNExecutionProvider']`
+* `provider_options=[{'backend_type':'htp'}]` 또는 `{'backend_path':'QnnHtp.dll'}` (둘 중 하나)
+* **CPU 폴백 비활성화**: `session.disable_cpu_ep_fallback = True` (모델 전부 QNN에서 도는지 검증용)
+* **컨텍스트 캐시**: `ep.context_enable` 켜서 **세션 생성 시간 단축**
+* (선택) `profiling_level`/`profiling_file_path`로 성능 CSV/로그 생성. ([ONNX Runtime][1])
+
+### 5.3 Python 예시
+
+```python
+import onnxruntime as ort
+opts = ort.SessionOptions()
+# 전체 모델이 QNN에 안 올라가면 예외 (검증 모드)
+opts.add_session_config_entry("session.disable_cpu_ep_fallback", "1")
+# QNN 컨텍스트 캐시 활성화 (세션 생성 시간 단축)
+opts.add_session_config_entry("ep.context_enable", "1")
+
+qnn_opts = {"backend_type": "htp"}  # 또는 {"backend_path": "QnnHtp.dll"} (둘 중 하나만)
+sess = ort.InferenceSession(
+    "models/model_int8_qdq.onnx",
+    sess_options=opts,
+    providers=["QNNExecutionProvider"],
+    provider_options=[qnn_opts],
+)
+
+# 추론
+out = sess.run(None, {
+    "input_ids": ids,
+    "kv_in": kv,
+    "adapter_A": A, "adapter_B": B,
+    "film_gamma": gamma, "film_beta": beta
+})
+```
+
+> `backend_type/backend_path` 및 위 세션 옵션들은 QNN EP 문서에 기재. `disable_cpu_ep_fallback`, `ep.context_enable` 역시 공식 옵션. ([ONNX Runtime][1])
+
+### 5.4 HTP SSR(서브시스템 리스타트) 대응
+
+* QNN HTP에서 **SSR 발생 시** ORT는 `ENGINE_ERROR`로 전달.
+* 앱 레벨에서 **세션 재생성**(warm-up 포함) 루틴을 반드시 구현. ([ONNX Runtime][1])
+
+---
+
+## 6) 프로파일링
+
+* `profiling_level`: `off|basic|detailed|optrace`
+* `profiling_file_path`: CSV 경로
+* ORT가 **QAIRT 2.39+**로 빌드된 경우 `_qnn.log`도 생성 → **qnn-profile-viewer**로 분석 가능. ([ONNX Runtime][1])
+
+---
+
+## 7) 컨텍스트 캐시 & Weight Sharing
+
+* QNN **context cache**를 사용하면 모델 초기화 시간을 크게 줄일 수 있다.
+* QNN 툴체인으로 생성한 **`qnn_ctx.bin`을 공유**하고, `EPContext` 노드를 포함한 **래퍼 ONNX**를 생성해 다중 세션에서 **공유 가중치/그래프**를 재사용 가능. (도구: `gen_qnn_ctx_onnx_model.py`) ([ONNX Runtime][1])
+
+---
+
+## 8) “실시간 학습” 설계 (NPU 추론 + CPU/GPU 경량 학습)
+
+### 8.1 즉시 반영(그래프 불변)
+
+* **Adapter/LoRA 주입:** `W + A@B` 경로를 그래프에 **사전 포함**, `A,B`는 **입력 텐서**로 노출 → 런타임에서 값 교체만으로 반영.
+* **FiLM 게인/바이어스:** `y = γ ⊙ y + β` 게이트를 입력으로 노출 → **γ,β 즉시 갱신**.
+* **외부 메모리(RAG/Key-Value 뱅크):** 검색결과를 프롬프트/조건 텐서로 주입 → **NPU는 추론만**, 학습은 인덱스 갱신으로 대체.
+
+### 8.2 주기 반영(핫스왑)
+
+* CPU/GPU에서 LoRA/Adapter **소량 스텝** 학습 → **더블 버퍼 세션**(`active`/`shadow`).
+* `shadow`에 새 파라미터 바인딩 후 Warm-up → 품질 통과 시 포인터 스왑.
+* **롤백 스냅샷**: 품질 하락 시 직전 버전 즉시 복귀.
+
+### 8.3 로깅 키(권장)
+
+```
+adapter.rank, adapter.lr, film.gamma.var, film.beta.var,
+hotswap.ts, rollback.ts, alpha_mix, conserve_mode.on
+```
+
+---
+
+## 9) 스트리밍 & Shape 규율
+
+* **KV 캐시/시퀀스 길이 고정**이 기본.
+* 토큰 스트리밍은 **슬라이딩 윈도우**로 구현(최근 N 토큰만 유지).
+* 배치 크기/패딩 전략을 사전에 고정해 QNN 그래프 재생성 이벤트를 예방.
+
+---
+
+## 10) 성능·전력 벤치마크 지침
+
+### 10.1 지표
+
+* **tokens/s**, **tokens/s/W**(가능 시).
+* 채택 기준(권장): CPU 대비 속도 **+30% 이상**, 또는 동속에서 전력 **−30% 이상**.
+
+### 10.2 방법
+
+* 고정 프롬프트/토큰 길이로 3회 이상 측정, **warm-up 후 평균**.
+* Windows ARM64는 HWiNFO/벤더 API로 전력 근사치 수집(불가 시 tokens/s만으로 1차 판단).
+
+---
+
+## 11) 수용(AC) 기준 & 테스트 플랜
+
+### 11.1 기능 AC
+
+* [ ] QNN HTP에서 **모델 전량 오프로딩** (CPU fallback off 상태에서 성공)
+* [ ] 세션 **컨텍스트 캐시** 활성화 상태에서 재생성 시간 감소
+* [ ] SSR 발생 시 **세션 재생성 루틴** 자동 동작
+
+### 11.2 성능 AC
+
+* [ ] 256 토큰 추론 **tokens/s ≥ CPU × 1.3** 또는 **동속·저전력**
+* [ ] 5회 반복 측정 표준편차 ≤ 5%
+
+### 11.3 “실시간” AC
+
+* [ ] Adapter/FiLM 입력값 교체 후 **NPU 세션 재컴파일 없이** 효과 반영
+* [ ] 핫스왑 딜레이 ≤ 200 ms (서비스 기준에 맞게 조정)
+
+---
+
+## 12) 트러블슈팅
+
+| 현상             | 가능 원인                                  | 조치                                                                            |
+| -------------- | -------------------------------------- | ----------------------------------------------------------------------------- |
+| `EP` 초기화 실패    | `backend_type` vs `backend_path` 동시 설정 | **둘 중 하나만** 설정. 경로/권한 확인. ([adrianlizarraga.github.io][2])                    |
+| 일부 Op CPU로 떨어짐 | 미지원 Op / QDQ 부재                        | QDQ 재적용, Layout 변환 확인, CPU fallback 임시 허용 후 문제 Op 식별. ([ONNX Runtime][1])     |
+| SSR로 추론 실패     | HTP SubSystem Restart                  | ORT 세션 **재생성** + Warm-up. ([ONNX Runtime][1])                                 |
+| 세션 생성 지연       | QNN 초기화 비용                             | `ep.context_enable=1`로 **컨텍스트 캐시** 사용. ([ONNX Runtime][1])                    |
+| 프로파일 파일 미생성    | 옵션 누락                                  | `profiling_level`, `profiling_file_path` 지정. QAIRT 버전 확인. ([ONNX Runtime][1]) |
+
+---
+
+## 13) 재현성·보안
+
+* **환경 고정**: Python/ORT/onnxruntime-qnn/드라이버/QNN SDK(필요 시) 버전 기록.
+* **아티팩트 버전**: `model_fp32.onnx`, `*_sim.onnx`, `*_int8_qdq.onnx`, `qnn_ctx.bin`, adapters.
+* **로그 스키마**:
+
+  * 세션: `ep=QNN`, `backend=htp|cpu|gpu`, `context.cache=on/off`
+  * 프로파일: `profiling.csv`, `_qnn.log`(지원 시) 경로
+  * 핫스왑: `hotswap.ts`, `rollback.ts`, `adapter.hash`
+
+---
+
+## 14) 빌드/런/릴리스 체크리스트 (붙여넣기용)
+
+**빌드**
+
+* [ ] PyTorch→ONNX (opset≥17, 고정 KV/seq, adapters/FiLM 입력화)
+* [ ] onnxsim 단순화 완료
+* [ ] QDQ INT8 (MatMul/Conv INT8, Softmax/LN FP 유지)
+
+**런타임**
+
+* [ ] ORT 세션: `['QNNExecutionProvider','DmlExecutionProvider','CPUExecutionProvider']`
+* [ ] `disable_cpu_ep_fallback=1`로 검증 → 통과 후 0으로 완화 가능
+* [ ] `ep.context_enable=1` 컨텍스트 캐시
+* [ ] 프로파일 옵션 설정 및 CSV 수집
+
+**실시간 경로**
+
+* [ ] Adapter/FiLM/메모리 **입력 텐서 바인딩** 설계
+* [ ] 더블 버퍼 세션 & 핫스왑/롤백 구현
+
+**수락**
+
+* [ ] 기능/성능/실시간 AC 충족
+
+---
+
+## 15) 코드 스켈레톤 (요약)
+
+### 15.1 `runtime_ort.py` (핵심)
+
+```python
+import onnxruntime as ort
+
+def create_qnn_session(model_path, use_backend_path=False):
+    opts = ort.SessionOptions()
+    opts.add_session_config_entry("session.disable_cpu_ep_fallback", "1")
+    opts.add_session_config_entry("ep.context_enable", "1")  # context cache
+
+    if use_backend_path:
+        pov = [{"backend_path": "QnnHtp.dll"}]  # or libQnnHtp.so
+    else:
+        pov = [{"backend_type": "htp"}]
+
+    return ort.InferenceSession(
+        model_path, sess_options=opts,
+        providers=["QNNExecutionProvider"],
+        provider_options=pov
+    )
+```
+
+> QNN EP, backend 옵션, 컨텍스트 캐시/폴백 설정은 공식 문서 근거. ([ONNX Runtime][1])
+
+### 15.2 `export_onnx.py` / `quantize_onnx.py`
+
+* 위 3·4장에서 제시한 스니펫 그대로 사용.
+
+### 15.3 `engine.py` (토글 & 핫스왑 개념)
+
+```python
+class Engine:
+    def __init__(self, mode="ort", model="models/model_int8_qdq.onnx"):
+        self.mode = mode
+        if mode=="ort":
+            self.sess_active = create_qnn_session(model)
+            self.sess_shadow = None
+
+    def swap_adapters(self, newA, newB, newGamma, newBeta):
+        # 입력 텐서 바인딩만 교체: 그래프 재컴파일 없음
+        self._adapters = (newA, newB, newGamma, newBeta)
+
+    def hot_swap(self, new_model_or_params):
+        # shadow 세션 생성→웜업→포인터 스왑
+        self.sess_shadow = create_qnn_session("models/model_int8_qdq.onnx")
+        # warmup...
+        self.sess_active, self.sess_shadow = self.sess_shadow, None
+```
+
+---
+
+## 부록 A) 참고 문서(핵심 근거)
+
+* **QNN EP 공식 문서/샘플/옵션(backend_path, backend_type, disable_cpu_ep_fallback, context cache, 프로파일링, SSR 등)**: ONNX Runtime QNN EP 가이드, 최근 빌드/패키지/옵션 안내 포함. ([ONNX Runtime][1])
+* **Execution Providers 개요/우선순위/등록 방법**: ORT EP 공식 페이지. ([ONNX Runtime][3])
+* **옵션 표(backend_type/ backend_path)와 예시**: QNN EP 옵션 문서화 버전(미러/중문 페이지 포함). ([adrianlizarraga.github.io][2])
+* **지원 EP 목록(요약 표, Qualcomm QNN 표시)**: ORT EP 목록(중문 미러). ([ONNX Runtime][4])
+
+---
+
+## 한 줄 결론
+
+**그래프는 NPU에서 “고정”으로 굴리고, 배워야 할 것은 “작은 파라미터와 메모리”만 옆길로 흘려라.**
+이 매뉴얼에 맞춰 배선하면, 오늘부터 바로 QNN 위에서 **안정적인 추론 + 즉시 반영형 학습**을 동시에 굴릴 수 있다.
+
+[1]: https://onnxruntime.ai/docs/execution-providers/QNN-ExecutionProvider.html?utm_source=chatgpt.com "Qualcomm - QNN | onnxruntime"
+[2]: https://adrianlizarraga.github.io/onnxruntime/docs/execution-providers/QNN-ExecutionProvider.html?utm_source=chatgpt.com "Qualcomm - QNN | onnxruntime"
+[3]: https://onnxruntime.ai/docs/execution-providers?utm_source=chatgpt.com "Execution Providers | onnxruntime"
+[4]: https://runtime.onnx.org.cn/docs/execution-providers/?utm_source=chatgpt.com "执行提供者 | onnxruntime - ONNX 运行时"

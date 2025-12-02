@@ -169,14 +169,15 @@ class UzrMirror:
         self._device = os.environ.get("UZR_DEVICE", "cpu")
         try:
             import torch as _torch
-            from model import UZRModel, ByteTokenizer, KoEnTokenizer  # type: ignore
+            from model import UZRModel, ByteTokenizer  # type: ignore
+            from utils.struct_tokenizer import TCodebookTokenizer  # type: ignore
             from memory import CompressedMemory  # type: ignore
             data = _torch.load(ckpt, map_location="cpu", weights_only=False)
             args = data.get("args", {}) if isinstance(data, dict) else {}
             rdw = data.get("model", {}).get("readout.weight") if isinstance(data, dict) else None
             rows = rdw.size(0) if hasattr(rdw, "size") else None
             max_len = int(args.get("max_len", 128))
-            tok = ByteTokenizer(max_len=max_len) if rows == 258 else KoEnTokenizer(max_len=max_len)
+            tok = ByteTokenizer(max_len=max_len) if rows == 258 else TCodebookTokenizer(max_len=max_len)
             mem = None
             if isinstance(data, dict) and "memory" in data:
                 mem = CompressedMemory(max_items=32000, device=self._device, enable_learning=True, learn_hidden=512, learn_depth=3, warmup_steps=1)

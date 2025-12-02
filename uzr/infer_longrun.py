@@ -6,7 +6,8 @@ from typing import Optional
 import torch
 from tqdm import trange
 
-from .model import UZRModel, ByteTokenizer, KoEnTokenizer, seq_ce_loss, soft_threshold, confidence_from_logits
+from .model import UZRModel, ByteTokenizer, seq_ce_loss, soft_threshold, confidence_from_logits
+from .utils.struct_tokenizer import TCodebookTokenizer
 from .meta_core import (
     load_meta_config,
     AbstainThresholds,
@@ -86,7 +87,7 @@ def main():
     cfg = data["args"]
     rdw = data.get("model", {}).get("readout.weight")
     rows = rdw.size(0) if isinstance(rdw, torch.Tensor) else None
-    tok = ByteTokenizer(max_len=cfg["max_len"]) if rows == 258 else KoEnTokenizer(max_len=cfg["max_len"])
+    tok = ByteTokenizer(max_len=cfg["max_len"]) if rows == 258 else TCodebookTokenizer(max_len=cfg["max_len"])
     model = UZRModel(
         tok.vocab_size,
         d_model=cfg["d_model"],

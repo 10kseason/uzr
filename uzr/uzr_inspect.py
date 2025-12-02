@@ -125,7 +125,7 @@ def summarize_checkpoint(path: str) -> Dict[str, Any]:
 
     # tokenizer guess
     vocab = int(dims.get("vocab_size", -1))
-    tokenizer = "ByteTokenizer" if vocab == 258 else "KoEnTokenizer"
+    tokenizer = "ByteTokenizer" if vocab == 258 else "TCodebookTokenizer"
 
     # memory summary
     mem_state = data.get("memory") if isinstance(data, dict) else None
@@ -201,8 +201,9 @@ def maybe_tokenize_sample(obj: Dict[str, Any], text: Optional[str], max_len: Opt
     dims = obj.get("dims", {})
     vocab = int(dims.get("vocab_size", -1))
     # Lazy import to avoid dependency if not needed
-    from uzr.model import ByteTokenizer, KoEnTokenizer  # type: ignore
-    tok = ByteTokenizer(max_len=max_len or dims.get("max_len", 128)) if vocab == 258 else KoEnTokenizer(max_len=max_len or dims.get("max_len", 128))
+    from uzr.model import ByteTokenizer  # type: ignore
+    from uzr.utils.struct_tokenizer import TCodebookTokenizer  # type: ignore
+    tok = ByteTokenizer(max_len=max_len or dims.get("max_len", 128)) if vocab == 258 else TCodebookTokenizer(max_len=max_len or dims.get("max_len", 128))
     ids = tok.encode(text)
     rec = tok.decode(ids)
     print("-- sample encode/decode --")
@@ -234,4 +235,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
